@@ -41,6 +41,9 @@ pnpm run check   # vp check --fix (format, lint, typecheck)
   `ssr.noExternal` for that. Keep `src/core.ts` and `src/components` in `files`.
 - The browser keys `reactions-visitor` and `reactions-admin` in localStorage
   are what existing readers already have. Changing them resets every count.
+- **`SKILL.md`** (repo root) teaches agents to set the package up in a site.
+  Users install it with `npx skills add mrmartineau/astro-d1-reactions`. Keep
+  it in step with the README when options or behaviour change.
 - Nothing in this repo runs the package end to end. Test it in a real Astro
   site (`pnpm add astro-d1-reactions@link:../astro-d1-reactions`), then
   `astro build` and `wrangler pages dev ./dist`.

@@ -16,6 +16,14 @@ Needs the [`@astrojs/cloudflare`](https://docs.astro.build/en/guides/integration
 
 Sister package: [`astro-d1-search`](https://github.com/mrmartineau/astro-d1-search).
 
+🤖 **Using a coding agent?** Install the skill and ask it to do the setup for you:
+
+```sh
+npx skills add mrmartineau/astro-d1-reactions
+```
+
+It teaches the agent the setup order, every file to change and the failure modes. See [`SKILL.md`](./SKILL.md).
+
 ## Install
 
 ```sh
