@@ -1,6 +1,6 @@
 {
   "name": "astro-d1-reactions",
-  "version": "0.0.0-development",
+  "version": "1.0.0",
   "description": "Astro integration for page reactions backed by Cloudflare D1: unique reads, hearts, reader highlights and a public stats page",
   "keywords": [
     "analytics",
