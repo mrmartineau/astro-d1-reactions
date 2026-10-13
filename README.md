@@ -315,6 +315,17 @@ import { getState, getStats, place, flag, ago } from "astro-d1-reactions/core";
 const stats = await getStats(env.REACTIONS_DB);
 ```
 
+## More Astro packages
+
+Other Astro tools I have made:
+
+- [astro-d1-search](https://github.com/mrmartineau/astro-d1-search): site search backed by Cloudflare D1 (SQLite FTS5)
+- [astro-git-dates](https://github.com/mrmartineau/astro-git-dates): set content collection dates from git history
+- [zed-astro-starter](https://github.com/mrmartineau/zed-astro-starter): an opinionated Astro starter, ready to deploy to Cloudflare Workers
+- [ZUI](https://github.com/mrmartineau/zui): a CSS-first UI library with Astro (and React, Solid, Svelte, Vue) components
+
 ## License
 
-MIT
+[MIT](https://choosealicense.com/licenses/mit/) © [Zander Martineau](https://zander.wtf)
+
+> Made by Zander • [zander.wtf](https://zander.wtf) • [GitHub](https://github.com/mrmartineau/)
