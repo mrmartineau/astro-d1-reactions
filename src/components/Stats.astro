@@ -1,0 +1,55 @@
+---
+// The whole stats dashboard: totals, every page, recent activity. Use it on a
+// server-rendered page (`export const prerender = false`). For your own
+// layout, call loadStats() and use StatsTotals, StatsTable and StatsActivity.
+import StatsActivity from './StatsActivity.astro';
+import StatsTable from './StatsTable.astro';
+import StatsTotals from './StatsTotals.astro';
+import { type LoadedStats, loadStats } from './stats';
+
+interface Props {
+  /** How many hearts and highlights the activity feed shows. Default: 40. */
+  activityLimit?: number;
+  /** Seconds browsers and the edge may cache the page. Default: 60. 0: no caching. */
+  cacheMaxAge?: number;
+  /** Number format locale. Default: the runtime's. */
+  locale?: string;
+}
+
+const { activityLimit = 40, cacheMaxAge = 60, locale } = Astro.props;
+
+let stats: LoadedStats | undefined;
+try {
+  stats = await loadStats(Astro.locals, activityLimit);
+} catch (err) {
+  console.error('[astro-d1-reactions] stats error:', err);
+}
+
+if (stats && cacheMaxAge > 0) {
+  Astro.response.headers.set('Cache-Control', `public, max-age=${cacheMaxAge}`);
+}
+---
+
+{
+  stats ? (
+    <>
+      <StatsTotals stats={stats} locale={locale} />
+      <h2>Every page</h2>
+      <StatsTable stats={stats} locale={locale}>
+        <slot name="empty" slot="empty">
+          Nothing yet. Go and read something.
+        </slot>
+      </StatsTable>
+      {stats.activity.length > 0 && (
+        <>
+          <h2>Activity</h2>
+          <StatsActivity stats={stats} />
+        </>
+      )}
+    </>
+  ) : (
+    <p>
+      <slot name="error">The stats are having a lie down. Try again in a bit.</slot>
+    </p>
+  )
+}

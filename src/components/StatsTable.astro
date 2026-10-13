@@ -1,0 +1,63 @@
+---
+// Every page with its views, hearts and highlights, most read first. A bar
+// behind each title shows its share of the most-read page.
+import config from 'virtual:astro-d1-reactions/config';
+import type { LoadedStats } from './stats';
+import './stats.css';
+
+interface Props {
+  stats: LoadedStats;
+  /** Number format locale. Default: the runtime's. */
+  locale?: string;
+}
+
+const { stats, locale } = Astro.props;
+const number = new Intl.NumberFormat(locale);
+const maxViews = Math.max(1, ...stats.rows.map((row) => row.views));
+const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
+---
+
+{
+  stats.rows.length ? (
+    <div class="reactions-stats reactions-stats-table">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Page</th>
+            <th scope="col" class="reactions-stats-type">
+              Type
+            </th>
+            <th scope="col" class="reactions-stats-num">
+              Views
+            </th>
+            <th scope="col" class="reactions-stats-num">
+              <Fragment set:html={icon(config.icons.heart)} />
+              <span class="visually-hidden">Hearts</span>
+            </th>
+            <th scope="col" class="reactions-stats-num">
+              <Fragment set:html={icon(config.icons.highlighter)} />
+              <span class="visually-hidden">Highlights</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.rows.map((row) => (
+            <tr style={`--share: ${row.views / maxViews}`}>
+              <th scope="row">
+                <a href={row.slug}>{row.title}</a>
+              </th>
+              <td class="reactions-stats-type">{row.type}</td>
+              <td class="reactions-stats-num">{number.format(row.views)}</td>
+              <td class="reactions-stats-num">{number.format(row.hearts)}</td>
+              <td class="reactions-stats-num">{number.format(row.highlights)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <p>
+      <slot name="empty">Nothing yet. Go and read something.</slot>
+    </p>
+  )
+}

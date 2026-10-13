@@ -1,0 +1,69 @@
+---
+// The latest hearts and highlights, newest first, in Today / This week /
+// Earlier, with where the reader was and how long ago.
+import { ago, flag, place } from '../core';
+import type { LoadedStats } from './stats';
+import './stats.css';
+
+interface Props {
+  stats: LoadedStats;
+}
+
+const { stats } = Astro.props;
+const now = Date.now() / 1000;
+const periods = [
+  { label: 'Today', within: 86400 },
+  { label: 'This week', within: 7 * 86400 },
+  { label: 'Earlier', within: Infinity },
+];
+const groups = periods.map((p) => ({ label: p.label, items: [] as LoadedStats['activity'] }));
+for (const a of stats.activity) {
+  groups[periods.findIndex((p) => now - a.at < p.within)]!.items.push(a);
+}
+const short = (text: string) => {
+  const flat = text.replace(/\s+/g, ' ');
+  return flat.length > 90 ? `${flat.slice(0, 90).trimEnd()}…` : flat;
+};
+---
+
+{
+  groups
+    .filter((g) => g.items.length)
+    .map((g) => (
+      <section class="reactions-stats reactions-stats-activity">
+        <h3>{g.label}</h3>
+        <ul>
+          {g.items.map((a) => {
+            const from = place(a.city, a.country);
+            return (
+              <li>
+                <span aria-hidden="true">{flag(a.country) || '🌍'}</span>
+                <p>
+                  Someone{from ? ` from ${from}` : ''}{' '}
+                  {a.kind === 'heart' ? (
+                    <>
+                      liked {a.noun} <a href={a.slug}>{a.title}</a>
+                      {a.n > 1 ? ` ${a.n} times` : ''}
+                    </>
+                  ) : (
+                    <>
+                      highlighted <q>{short(a.text ?? '')}</q> in <a href={a.slug}>{a.title}</a>
+                    </>
+                  )}
+                  <span class="reactions-stats-ago">
+                    {' · '}
+                    <time
+                      datetime={new Date(a.at * 1000).toISOString()}
+                      title={new Date(a.at * 1000).toUTCString()}
+                    >
+                      {ago(a.at, now)}
+                    </time>
+                  </span>
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ))
+}

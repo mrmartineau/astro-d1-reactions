@@ -1,0 +1,36 @@
+---
+// Four tiles: views, unique readers, hearts and highlights.
+import config from 'virtual:astro-d1-reactions/config';
+import type { LoadedStats } from './stats';
+import './stats.css';
+
+interface Props {
+  stats: LoadedStats;
+  /** Number format locale. Default: the runtime's. */
+  locale?: string;
+}
+
+const { stats, locale } = Astro.props;
+const number = new Intl.NumberFormat(locale);
+const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
+const tiles = [
+  { label: 'Views', value: stats.totals.views, icon: config.icons.eye },
+  { label: 'Readers', value: stats.totals.readers, icon: config.icons.users },
+  { label: 'Hearts', value: stats.totals.hearts, icon: config.icons.heart },
+  { label: 'Highlights', value: stats.totals.highlights, icon: config.icons.highlighter },
+];
+---
+
+<dl class="reactions-stats reactions-stats-totals">
+  {
+    tiles.map((tile) => (
+      <div>
+        <dt>
+          <Fragment set:html={icon(tile.icon)} />
+          {tile.label}
+        </dt>
+        <dd>{number.format(tile.value)}</dd>
+      </div>
+    ))
+  }
+</dl>
