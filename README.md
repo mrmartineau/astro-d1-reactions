@@ -305,6 +305,8 @@ Set any of these on `:root`. The package's defaults have zero specificity, so yo
   --rx-font-headings: inherit;
   --rx-font-mono: ui-monospace, monospace;
   --rx-bottom: 1rem; /* gap under the pill */
+  --rx-radius: 0.625rem; /* corner roundness */
+  --rx-border-width: 1px; /* pill border; 0 removes it */
   --rx-stats-tile: #ffffff12; /* stats total tiles */
   --rx-stats-radius: 0.5rem;
 }

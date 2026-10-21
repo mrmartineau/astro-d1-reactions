@@ -271,7 +271,7 @@ Icons take SVG markup or a path to an `.svg` file from the project root. Use
 
 Theme with CSS custom properties on `:root`: `--rx-bg`, `--rx-line`,
 `--rx-text`, `--rx-text-bright`, `--rx-accent`, `--rx-heart`, `--rx-shadow`,
-`--rx-font`, `--rx-font-headings`, `--rx-font-mono`, `--rx-bottom`,
+`--rx-font`, `--rx-font-headings`, `--rx-font-mono`, `--rx-bottom`, `--rx-radius`, `--rx-border-width`,
 `--rx-stats-tile`, `--rx-stats-radius`. The defaults have zero specificity, so
 any rule wins.
 
