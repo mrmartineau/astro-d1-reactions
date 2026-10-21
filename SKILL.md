@@ -170,6 +170,30 @@ const blog = defineCollection({
 Then `reactions: false` in a post hides everything. `highlights: false` keeps
 hearts and reads.
 
+### Pages without frontmatter
+
+A homepage or other `.astro` page has no frontmatter. When one layout wraps
+every page, let the layout take the pill's props and pass them on:
+
+```astro
+---
+// src/layouts/Layout.astro
+const { reactions } = Astro.props;
+---
+<slot />
+<Reactions {...reactions} />
+```
+
+```astro
+<!-- src/pages/index.astro -->
+<Layout reactions={{ slug: '/', highlights: false }}>…</Layout>
+```
+
+- `{ highlights: false }`: hearts and reads, no highlights.
+- `{ slug: false }`: no hearts or reads.
+- Do not put `'/'` in the `highlights` option for the homepage. It matches the
+  start of the path, so it turns highlights on for every page.
+
 ## The stats page
 
 ```astro

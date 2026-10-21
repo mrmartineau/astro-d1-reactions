@@ -177,6 +177,39 @@ const blog = defineCollection({
 });
 ```
 
+### Pages without frontmatter
+
+A homepage or other `.astro` page has no frontmatter to switch. Let the layout take the pill's props and pass them on:
+
+```astro
+---
+// src/layouts/Layout.astro
+import { Reactions } from 'astro-d1-reactions/components';
+const { reactions } = Astro.props;
+---
+
+<slot />
+<Reactions {...reactions} />
+```
+
+Then each page sets its own:
+
+```astro
+---
+// src/pages/index.astro
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout reactions={{ slug: '/', highlights: false }}>…</Layout>
+```
+
+```astro
+<Layout reactions={{ highlights: false }}>   <!-- hearts and reads, no highlights -->
+<Layout reactions={{ slug: false }}>          <!-- no hearts or reads -->
+```
+
+Don't use `'/'` in the `highlights` option to mean the homepage. The option matches the start of the path, and every path starts with `/`, so it turns highlights on everywhere.
+
 ## The stats page
 
 The whole dashboard is one component. The page must render on the server:
