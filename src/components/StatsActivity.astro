@@ -42,12 +42,16 @@ const short = (text: string) => {
                   Someone{from ? ` from ${from}` : ''}{' '}
                   {a.kind === 'heart' ? (
                     <>
-                      liked {a.noun} <a href={a.slug}>{a.title}</a>
+                      liked{' '}{a.noun}{' '}
+                      <a href={a.slug}>{a.title}</a>
                       {a.n > 1 ? ` ${a.n} times` : ''}
                     </>
                   ) : (
                     <>
-                      highlighted <q>{short(a.text ?? '')}</q> in <a href={a.slug}>{a.title}</a>
+                      highlighted{' '}
+                      <q>{short(a.text ?? '')}</q>
+                      {' in '}
+                      <a href={a.slug}>{a.title}</a>
                     </>
                   )}
                   <span class="reactions-stats-ago">
