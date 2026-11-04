@@ -20,7 +20,7 @@ const { activityLimit = 40, cacheMaxAge = 60, locale } = Astro.props;
 
 let stats: LoadedStats | undefined;
 try {
-  stats = await loadStats(Astro.locals, activityLimit);
+  stats = await loadStats(activityLimit);
 } catch (err) {
   console.error('[astro-d1-reactions] stats error:', err);
 }

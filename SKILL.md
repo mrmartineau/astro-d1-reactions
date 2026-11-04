@@ -234,7 +234,7 @@ Make each `url` match the `slug` the pill uses on that page, with no trailing
 slash. `:slug` becomes the entry's `slug`, or its `id`. Entries with
 `draft: true` are left out in production.
 
-For a custom layout, use `loadStats(Astro.locals)` with `StatsTotals`,
+For a custom layout, use `loadStats()` with `StatsTotals`,
 `StatsTable` and `StatsActivity`, all from `astro-d1-reactions/components`.
 
 ## Admin token

@@ -1,6 +1,7 @@
 // Loads the stats dashboard's data: the numbers from D1, the titles from the
 // `pages` option (content collection frontmatter, or listed by hand).
 import { getCollection } from "astro:content";
+import { env } from "cloudflare:workers";
 import config from "virtual:astro-d1-reactions/config";
 import { type D1Like, getStats, type StatsActivity, type StatsRow } from "../core";
 
@@ -48,12 +49,11 @@ async function pageMap() {
 }
 
 /**
- * The stats for a server-rendered page. Pass `Astro.locals`.
- * Throws if the D1 binding is missing or the query fails.
+ * The stats for a server-rendered page. Reads the D1 binding from
+ * `cloudflare:workers`. Throws if the binding is missing or the query fails.
  */
-export async function loadStats(locals: unknown, activityLimit = 40): Promise<LoadedStats> {
-  const env = (locals as { runtime?: { env?: Record<string, unknown> } }).runtime?.env;
-  const db = env?.[config.binding] as D1Like | undefined;
+export async function loadStats(activityLimit = 40): Promise<LoadedStats> {
+  const db = env[config.binding] as D1Like | undefined;
   if (!db) throw new Error(`[astro-d1-reactions] D1 binding "${config.binding}" not found`);
 
   // Fetch extra activity: rows for unknown paths are dropped below.

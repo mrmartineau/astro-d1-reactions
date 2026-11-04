@@ -260,7 +260,7 @@ Entries with `draft: true` are left out in production. Without `pages`, the dash
 ---
 export const prerender = false;
 import { loadStats, StatsActivity, StatsTable, StatsTotals } from 'astro-d1-reactions/components';
-const stats = await loadStats(Astro.locals);
+const stats = await loadStats();
 ---
 
 <StatsTotals stats={stats} />

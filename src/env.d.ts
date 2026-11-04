@@ -1,5 +1,9 @@
 /// <reference types="astro/client" />
 
+declare module "cloudflare:workers" {
+  export const env: Record<string, unknown>;
+}
+
 declare module "virtual:astro-d1-reactions/config" {
   type Config = import("./config").ResolvedD1ReactionsConfig;
   const config: Config & { icons: import("./config").ReactionsIcons };

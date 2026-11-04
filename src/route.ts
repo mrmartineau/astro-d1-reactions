@@ -7,6 +7,7 @@
 // happens.
 import config from "virtual:astro-d1-reactions/config";
 import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 import { canHighlight, type D1Like, getState } from "./core";
 
 export const prerender = false;
@@ -26,7 +27,7 @@ async function isAdmin(token: unknown, secret: unknown) {
   return (await sha256(token)) === (await sha256(secret));
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   type Body = Partial<
     Record<"slug" | "visitor" | "action" | "text" | "start" | "id" | "token", unknown>
   >;
@@ -39,20 +40,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: "Invalid visitor" }, 400);
   }
 
-  const runtime = (
-    locals as unknown as {
-      runtime: { env: Record<string, unknown>; cf?: { city?: string; country?: string } };
-    }
-  ).runtime;
-  const db = runtime.env[config.binding] as D1Like | undefined;
+  // `env` comes from `cloudflare:workers` and the reader's location from
+  // `request.cf` (Astro 6+ adapter; the old `locals.runtime` is gone).
+  const db = env[config.binding] as D1Like | undefined;
   if (!db) {
     return json({ error: `D1 binding "${config.binding}" not found` }, 500);
   }
-  const admin = await isAdmin(body.token, runtime.env[config.adminTokenEnv]);
+  const admin = await isAdmin(body.token, env[config.adminTokenEnv]);
   // Where the reader is, from Cloudflare: shown with highlights and on the
-  // stats page.
-  const city = runtime.cf?.city ?? null;
-  const country = runtime.cf?.country ?? null;
+  // stats page. Structurally typed (via unknown) so the package depends on
+  // neither the host project's Env types nor workers-types.
+  const cf = (request as unknown as { cf?: { city?: string; country?: string } }).cf;
+  const city = cf?.city ?? null;
+  const country = cf?.country ?? null;
 
   if (action === "view") {
     // Your own reads don't count.
