@@ -1,3 +1,9 @@
+## [2.0.1](https://github.com/mrmartineau/astro-d1-reactions/compare/v2.0.0...v2.0.1) (2026-11-04)
+
+### Bug Fixes
+
+- load cloudflare:workers lazily in loadStats ([620e3ef](https://github.com/mrmartineau/astro-d1-reactions/commit/620e3ef6935955a73f8aaced0acffe7950020b71))
+
 # [2.0.0](https://github.com/mrmartineau/astro-d1-reactions/compare/v1.0.0...v2.0.0) (2026-11-04)
 
 - feat!: support the Astro 6+ Cloudflare adapter, drop Astro 5 ([7a91e52](https://github.com/mrmartineau/astro-d1-reactions/commit/7a91e52da90fdcdb2442e8ec57ff9b716a250ce8))
