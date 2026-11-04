@@ -1,7 +1,6 @@
 // Loads the stats dashboard's data: the numbers from D1, the titles from the
 // `pages` option (content collection frontmatter, or listed by hand).
 import { getCollection } from "astro:content";
-import { env } from "cloudflare:workers";
 import config from "virtual:astro-d1-reactions/config";
 import { type D1Like, getStats, type StatsActivity, type StatsRow } from "../core";
 
@@ -53,6 +52,10 @@ async function pageMap() {
  * `cloudflare:workers`. Throws if the binding is missing or the query fails.
  */
 export async function loadStats(activityLimit = 40): Promise<LoadedStats> {
+  // Imported here, not at the top: this file loads with the rest of
+  // `astro-d1-reactions/components` on every page, including prerendered ones
+  // that run in Node, where `cloudflare:workers` does not exist.
+  const { env } = await import("cloudflare:workers");
   const db = env[config.binding] as D1Like | undefined;
   if (!db) throw new Error(`[astro-d1-reactions] D1 binding "${config.binding}" not found`);
 
