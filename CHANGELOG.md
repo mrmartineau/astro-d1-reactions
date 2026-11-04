@@ -1,3 +1,21 @@
+# [2.0.0](https://github.com/mrmartineau/astro-d1-reactions/compare/v1.0.0...v2.0.0) (2026-11-04)
+
+- feat!: support the Astro 6+ Cloudflare adapter, drop Astro 5 ([7a91e52](https://github.com/mrmartineau/astro-d1-reactions/commit/7a91e52da90fdcdb2442e8ec57ff9b716a250ce8))
+
+### Bug Fixes
+
+- keep spaces around links in stats activity ([96149e1](https://github.com/mrmartineau/astro-d1-reactions/commit/96149e16e0a33e4773e2119524be3e2f95b42fe8))
+
+### Features
+
+- add --rx-radius and --rx-border-width theme variables ([5b13719](https://github.com/mrmartineau/astro-d1-reactions/commit/5b1371924f7f56727f2e6176e106f565c8f177f5))
+- add agent skill ([14db39d](https://github.com/mrmartineau/astro-d1-reactions/commit/14db39dfffcc20958158b8bf0881abd6b6419666))
+
+### BREAKING CHANGES
+
+- Astro 5 is no longer supported. `loadStats()` no longer
+  takes `locals`; call `loadStats(activityLimit?)` instead.
+
 # 1.0.0 (2026-10-13)
 
 ### Bug Fixes
