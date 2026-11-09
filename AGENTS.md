@@ -13,6 +13,12 @@ pnpm run test    # bun test
 pnpm run check   # vp check --fix (format, lint, typecheck)
 ```
 
+## Coding standards
+
+Follow the `coding-standards` skill (`~/code/mrmartineau/agent-skills/skills/coding-standards/`). Where this file and the skill disagree, this file wins: it describes how this repo already works. Do not rename existing files or classes to match the skill unless asked.
+
+Known differences from the skill: PascalCase component files (`Reactions.astro`, `Stats.astro`).
+
 ## Layout
 
 | Path              | Ships as                    | Role                                                                             |
