@@ -111,6 +111,8 @@ That's it. Open a page, give it a heart, select a sentence.
 
 `slug={false}` hides hearts and reads, so only what you slot in shows.
 
+It works with Astro's `ClientRouter` (view transitions). The pill starts again after each navigation, and counts a read for each page you land on.
+
 ### Add your own buttons
 
 Anything in the default slot joins the pill. Give it `class="reactions-seg"` for the same look, and `data-hint` for the line that pops up on hover. The `after` slot is for popovers that belong to the pill. Give them `class="reactions-popover"` for the same look and position.
