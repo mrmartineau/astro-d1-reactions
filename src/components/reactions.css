@@ -56,15 +56,9 @@
   margin: 0;
   border: 0;
   background: none;
+  color: inherit;
   font: inherit;
   cursor: pointer;
-}
-
-/* In :where() so it has no specificity. As `.reactions button` it beat
-   `.reactions-seg { color: var(--rx-text) }`, so the pill's text took the
-   page's colour: dark text on the dark pill in a light scheme. */
-:where(.reactions button) {
-  color: inherit;
 }
 
 .reactions button:disabled {
@@ -111,8 +105,14 @@
   align-items: center;
   gap: 0.4em;
   padding: 0.4rem 0.75rem;
-  color: var(--rx-text);
   white-space: nowrap;
+}
+
+/* Its own rule, with a second class, so it beats `.reactions button { color:
+   inherit }` above. With one class the button took the page's colour: dark
+   text on the dark pill in a light scheme. */
+.reactions .reactions-seg {
+  color: var(--rx-text);
 }
 
 .reactions-seg + .reactions-seg {
