@@ -1,3 +1,9 @@
+## [2.0.2](https://github.com/mrmartineau/astro-d1-reactions/compare/v2.0.1...v2.0.2) (2026-11-12)
+
+### Bug Fixes
+
+- Let the pill text use --rx-text on buttons ([#2](https://github.com/mrmartineau/astro-d1-reactions/issues/2)) ([a6518c1](https://github.com/mrmartineau/astro-d1-reactions/commit/a6518c193792025b9096919ce1819b603ebebbb8))
+
 ## [2.0.1](https://github.com/mrmartineau/astro-d1-reactions/compare/v2.0.0...v2.0.1) (2026-11-04)
 
 ### Bug Fixes
