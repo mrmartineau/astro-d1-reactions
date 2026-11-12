@@ -251,8 +251,20 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, visitor, token, ...body }),
       });
-      if (res.ok) render(await res.json());
+      if (!res.ok) return;
+      const next = await res.json();
+      // Let the request finish, so a heart or mark is kept. But do not draw it
+      // for a page we have left: CSS.highlights is shared by the whole
+      // document, and these ranges belong to a page that is gone.
+      if (!signal.aborted) render(next);
     };
+
+    // The same registry holds this page's marks. Drop them when the page goes.
+    if (canDraw) {
+      signal.addEventListener('abort', () => {
+        for (const kind of ['mine', 'them', 'flash']) CSS.highlights.delete(`reactions-${kind}`);
+      });
+    }
 
     // The text nodes of root as one string: offsets in it are what we store.
     // A start exactly at the end of a text node belongs to the next one.
@@ -312,7 +324,10 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
       window.scrollBy({ top: top - window.innerHeight / 3 });
       if (!canDraw) return;
       CSS.highlights.set('reactions-flash', new Highlight(found.range));
-      setTimeout(() => CSS.highlights.delete('reactions-flash'), 1500);
+      // After a navigation this would delete the next page's flash.
+      setTimeout(() => {
+        if (!signal.aborted) CSS.highlights.delete('reactions-flash');
+      }, 1500);
     };
 
     const renderList = () => {

@@ -111,7 +111,7 @@ That's it. Open a page, give it a heart, select a sentence.
 
 `slug={false}` hides hearts and reads, so only what you slot in shows.
 
-It works with Astro's `ClientRouter` (view transitions). The pill starts again after each navigation, and counts a read for each page you land on.
+It works with Astro's `ClientRouter` (view transitions). The pill starts again after each navigation, and counts a read for each page you land on. Do not put the pill under `transition:persist`: Astro then keeps the old pill, with the old page's slug.
 
 ### Add your own buttons
 
