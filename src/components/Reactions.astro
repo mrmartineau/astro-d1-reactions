@@ -135,9 +135,22 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
     type ReactionsState,
   } from '../core';
 
-  const box = document.querySelector<HTMLElement>('.reactions');
+  // With the Astro ClientRouter this module runs once, but every page brings a
+  // new pill. So set up the pill on the page now, and again after each
+  // navigation. `started` stops one pill being set up twice, and `stop` drops
+  // the document and window listeners of the page we left.
+  const started = new WeakSet<HTMLElement>();
+  let stop: AbortController | undefined;
 
-  if (box && (!box.dataset.when || document.documentElement.matches(box.dataset.when))) {
+  function init() {
+    const box = document.querySelector<HTMLElement>('.reactions');
+    if (box && started.has(box)) return;
+    stop?.abort();
+    stop = undefined;
+    if (!box) return;
+    started.add(box);
+    if (box.dataset.when && !document.documentElement.matches(box.dataset.when)) return;
+    stop = new AbortController();
     box.hidden = false;
 
     const say = box.querySelector<HTMLElement>('.reactions-say')!;
@@ -170,8 +183,12 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
       seg.addEventListener('pointerleave', hide);
     }
 
-    if (box.dataset.slug) reactions(box, box.dataset.slug, show, hide, live);
+    if (box.dataset.slug) reactions(box, box.dataset.slug, show, hide, live, stop.signal);
   }
+
+  init();
+  // Fires after every ClientRouter navigation. Sites without the router never see it.
+  document.addEventListener('astro:page-load', init);
 
   function reactions(
     box: HTMLElement,
@@ -179,6 +196,7 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
     show: (seg: HTMLElement, text: string, hold?: boolean) => void,
     hide: () => void,
     live: HTMLElement,
+    signal: AbortSignal,
   ) {
     const panel = box.querySelector<HTMLElement>('.reactions-panel');
     const list = panel?.querySelector('ol');
@@ -233,8 +251,20 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, visitor, token, ...body }),
       });
-      if (res.ok) render(await res.json());
+      if (!res.ok) return;
+      const next = await res.json();
+      // Let the request finish, so a heart or mark is kept. But do not draw it
+      // for a page we have left: CSS.highlights is shared by the whole
+      // document, and these ranges belong to a page that is gone.
+      if (!signal.aborted) render(next);
     };
+
+    // The same registry holds this page's marks. Drop them when the page goes.
+    if (canDraw) {
+      signal.addEventListener('abort', () => {
+        for (const kind of ['mine', 'them', 'flash']) CSS.highlights.delete(`reactions-${kind}`);
+      });
+    }
 
     // The text nodes of root as one string: offsets in it are what we store.
     // A start exactly at the end of a text node belongs to the next one.
@@ -294,7 +324,10 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
       window.scrollBy({ top: top - window.innerHeight / 3 });
       if (!canDraw) return;
       CSS.highlights.set('reactions-flash', new Highlight(found.range));
-      setTimeout(() => CSS.highlights.delete('reactions-flash'), 1500);
+      // After a navigation this would delete the next page's flash.
+      setTimeout(() => {
+        if (!signal.aborted) CSS.highlights.delete('reactions-flash');
+      }, 1500);
     };
 
     const renderList = () => {
@@ -400,7 +433,7 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
       };
 
       // Show the Highlight button above a selection inside root.
-      document.addEventListener('selectionchange', () => {
+      const onSelection = () => {
         const selection = document.getSelection();
         const range = selection?.rangeCount ? selection.getRangeAt(0) : undefined;
         const raw = range?.toString() ?? '';
@@ -422,7 +455,8 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
         pending = { text, start: before.toString().length + lead, range };
         placeAdd();
         add.hidden = false;
-      });
+      };
+      document.addEventListener('selectionchange', onSelection, { signal });
 
       // Keep the selection when the button is pressed.
       add.addEventListener('mousedown', (event) => event.preventDefault());
@@ -461,7 +495,7 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
           tip.hidden = true;
           placeAdd();
         },
-        { passive: true },
+        { passive: true, signal },
       );
     }
 

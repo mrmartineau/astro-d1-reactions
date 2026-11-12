@@ -136,6 +136,9 @@ Ask the user only for what you cannot find: the database name (default to
   element that holds the article body, not on `<body>`. Nav and footer text
   would then be selectable too.
 - The `slug` is the key in the database. Pick it once. A new key starts from zero.
+- Works with the Astro `ClientRouter`. The pill starts again after each
+  navigation. Nothing to set up. Do not put the pill under `transition:persist`:
+  Astro then keeps the old pill, with the old page's slug.
 
 Add buttons to the pill with the default slot. Popovers go in the `after` slot:
 
