@@ -303,6 +303,20 @@ It asks D1 through `wrangler d1 execute`, so it uses your wrangler config and lo
 | `--limit <n>` | `20`           | Rows in each list                           |
 | `--watch`     | off            | Refresh every 10 seconds                    |
 
+To run it with `pnpm run stats`, add scripts to your site's `package.json`:
+
+```json
+{
+  "scripts": {
+    "stats": "astro-d1-reactions stats",
+    "stats:watch": "astro-d1-reactions stats --watch",
+    "stats:local": "astro-d1-reactions stats --local"
+  }
+}
+```
+
+Add `--db <name>` to each one if your binding is not `REACTIONS_DB`.
+
 ## Icons
 
 Swap any icon. Give SVG markup, or a path to an `.svg` file from the project root:

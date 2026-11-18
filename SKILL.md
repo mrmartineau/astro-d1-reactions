@@ -244,7 +244,14 @@ For the stats in a terminal, run `npx astro-d1-reactions stats` in the site's
 folder. It reads D1 through wrangler, so it needs the user's wrangler login.
 Add `--db <name>` if the binding is not `REACTIONS_DB`, `--local` for the dev
 database and `--watch` to refresh every 10 seconds. It lists every path: it
-can't read the `pages` option.
+can't read the `pages` option. Offer to add scripts to the site's
+`package.json`, so `pnpm run stats` works:
+
+```json
+"stats": "astro-d1-reactions stats",
+"stats:watch": "astro-d1-reactions stats --watch",
+"stats:local": "astro-d1-reactions stats --local"
+```
 
 ## Admin token
 
