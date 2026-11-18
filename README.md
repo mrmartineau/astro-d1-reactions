@@ -294,7 +294,7 @@ LATEST
   9m  ✎ "the best code is the code never written"  /blog/d1-is-good  🇯🇵 Tokyo, Japan
 ```
 
-It asks D1 through `wrangler d1 execute`, so it uses your wrangler config and login. It only reads. It lists every path, because it can't read the `pages` option.
+It asks D1 through `wrangler d1 execute`, so it uses your wrangler config and login. It only reads. It lists every path, because it can't read the `pages` option. It does not run on Windows yet (use WSL).
 
 | Flag          | Default        | What it does                                |
 | ------------- | -------------- | ------------------------------------------- |

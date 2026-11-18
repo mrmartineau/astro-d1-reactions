@@ -44,16 +44,29 @@ function wranglerD1(db: string, local: boolean): D1Like {
     async batch(statements) {
       const sql = (statements as Statement[]).map((s) => s.sql).join(";\n");
       const where = local ? "--local" : "--remote";
-      const { stdout } = await execFileAsync(
+      // ponytail: runs `npx` without a shell, so not on Windows (npx.cmd).
+      const output = await execFileAsync(
         "npx",
         ["wrangler", "d1", "execute", db, where, "--json", "--command", sql],
         { maxBuffer: 64 * 1024 * 1024 },
-      ).catch((error: { stdout?: string; message: string }) => {
-        // With --json, wrangler prints its error as {"error":{"text":"…"}}.
-        throw new Error(/"text":\s*"(.*)"/.exec(error.stdout ?? "")?.[1] ?? error.message);
-      });
-      // wrangler sends SQL NULL as the string "null".
-      return JSON.parse(stdout, (_, value) => (value === "null" ? null : value));
+      ).then(
+        (result) => result.stdout,
+        // Not error.message: it holds the whole command, SQL and all.
+        (error: { stdout?: string; stderr?: string }) => error.stdout || error.stderr || "",
+      );
+      // With --json, wrangler prints the results, or {"error":{"text":"…"}}.
+      // It sends SQL NULL as the string "null": only city and country are NULL.
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(output, (key, value) =>
+          value === "null" && (key === "city" || key === "country") ? null : value,
+        );
+      } catch {}
+      if (!Array.isArray(parsed)) {
+        const text = (parsed as { error?: { text?: string } } | undefined)?.error?.text;
+        throw new Error(text || output.trim() || "wrangler failed with no output");
+      }
+      return parsed;
     },
   };
 }
