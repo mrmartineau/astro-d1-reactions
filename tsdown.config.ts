@@ -5,7 +5,7 @@ export default defineConfig({
   // `injectRoute` takes a *file path*. `core` is a separate subpath export so
   // Worker code never pulls in the Node-only integration. The components ship
   // as source (`src/components`): the consuming project's Astro compiles them.
-  entry: ["src/index.ts", "src/core.ts", "src/schema.ts", "src/route.ts"],
+  entry: ["src/index.ts", "src/core.ts", "src/schema.ts", "src/route.ts", "src/cli.ts"],
   format: ["esm"],
   target: "es2022",
   platform: "node",

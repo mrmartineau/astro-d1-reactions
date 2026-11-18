@@ -29,6 +29,9 @@
     "type": "git",
     "url": "git+https://github.com/mrmartineau/astro-d1-reactions.git"
   },
+  "bin": {
+    "astro-d1-reactions": "./dist/cli.mjs"
+  },
   "files": [
     "dist",
     "src/components",
