@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { resolveConfig } from "./config";
-import { ago, canHighlight, flag, inlineValues, place, plural } from "./core";
+import { ago, canHighlight, flag, place, plural } from "./core";
 
 describe("resolveConfig", () => {
   it("needs a database and fills in the rest", () => {
@@ -60,13 +60,5 @@ describe("plural", () => {
   it("picks the word for the count", () => {
     expect(plural(1, "mark", "marks")).toBe("mark");
     expect(plural(0, "mark", "marks")).toBe("marks");
-  });
-});
-
-describe("inlineValues", () => {
-  it("fills ? and ?N with numbers and refuses the rest", () => {
-    expect(inlineValues("LIMIT ?", [40])).toBe("LIMIT 40");
-    expect(inlineValues("?2 AND ?1", [1, 2])).toBe("2 AND 1");
-    expect(() => inlineValues("WHERE slug = ?", ["'; DROP TABLE views"])).toThrow("numbers only");
   });
 });

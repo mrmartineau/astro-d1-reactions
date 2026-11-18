@@ -50,23 +50,6 @@ export type D1Like = {
   batch(statements: D1Statement[]): Promise<{ results: unknown[] }[]>;
 };
 
-/**
- * Puts bound values into the SQL, for a runner that takes no bound values
- * (the CLI runs queries through `wrangler d1 execute`). Numbers only, so a
- * value can't break out of the SQL. Takes `?` and `?1` placeholders, and
- * assumes no `?` sits inside a string literal.
- */
-export function inlineValues(sql: string, values: unknown[]) {
-  let next = 0;
-  return sql.replace(/\?(\d*)/g, (_, index: string) => {
-    const value = values[index ? Number(index) - 1 : next++];
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      throw new Error(`Can't inline ${String(value)}: numbers only`);
-    }
-    return String(value);
-  });
-}
-
 /** Can readers highlight text on this path? See the `highlights` option. */
 export const canHighlight = (highlights: boolean | string[], slug: string) =>
   Array.isArray(highlights) ? highlights.some((prefix) => slug.startsWith(prefix)) : highlights;

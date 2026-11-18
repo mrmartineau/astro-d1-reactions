@@ -2,20 +2,10 @@
 // `npx astro-d1-reactions stats`: the stats page, in a terminal. Run it in the
 // site's folder. It asks wrangler, so it uses the site's wrangler config and
 // login, and needs no token of its own. It only reads.
-import { execFile } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { parseArgs, promisify, styleText } from "node:util";
-import {
-  ago,
-  type D1Like,
-  type D1Statement,
-  flag,
-  getStats,
-  inlineValues,
-  place,
-  plural,
-  type Stats,
-} from "./core";
+import { parseArgs, styleText } from "node:util";
+import { ago, flag, getStats, place, plural, type Stats } from "./core";
+import { wranglerD1 } from "./wrangler-d1";
 
 const HELP = `Usage: astro-d1-reactions stats [options]
 
@@ -27,49 +17,6 @@ Run it in your site's folder, so wrangler finds its config.
   --limit <n>   Rows in each list (default: 20)
   --watch       Refresh every 10 seconds
   -h, --help    Show this text`;
-
-const execFileAsync = promisify(execFile);
-
-type Statement = D1Statement & { sql: string };
-
-/** A D1Like that runs a whole batch as one `wrangler d1 execute` call. */
-function wranglerD1(db: string, local: boolean): D1Like {
-  const prepare = (sql: string): Statement => ({
-    sql,
-    bind: (...values) => prepare(inlineValues(sql, values)),
-    run: () => Promise.reject(new Error("The CLI only reads")),
-  });
-  return {
-    prepare,
-    async batch(statements) {
-      const sql = (statements as Statement[]).map((s) => s.sql).join(";\n");
-      const where = local ? "--local" : "--remote";
-      // ponytail: runs `npx` without a shell, so not on Windows (npx.cmd).
-      const output = await execFileAsync(
-        "npx",
-        ["wrangler", "d1", "execute", db, where, "--json", "--command", sql],
-        { maxBuffer: 64 * 1024 * 1024 },
-      ).then(
-        (result) => result.stdout,
-        // Not error.message: it holds the whole command, SQL and all.
-        (error: { stdout?: string; stderr?: string }) => error.stdout || error.stderr || "",
-      );
-      // With --json, wrangler prints the results, or {"error":{"text":"…"}}.
-      // It sends SQL NULL as the string "null": only city and country are NULL.
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(output, (key, value) =>
-          value === "null" && (key === "city" || key === "country") ? null : value,
-        );
-      } catch {}
-      if (!Array.isArray(parsed)) {
-        const text = (parsed as { error?: { text?: string } } | undefined)?.error?.text;
-        throw new Error(text || output.trim() || "wrangler failed with no output");
-      }
-      return parsed;
-    },
-  };
-}
 
 const tty = process.stdout.isTTY;
 const dim = (text: string) => (tty ? styleText("dim", text) : text);
@@ -127,15 +74,28 @@ async function main() {
   }
 
   const db = wranglerD1(values.db, values.local);
-  do {
-    const stats = await getStats(db, limit);
-    if (values.watch) {
-      console.clear();
-      console.log(dim(`${new Date().toLocaleTimeString("en-GB")} · every 10s · ctrl-c to stop\n`));
+  if (!values.watch) {
+    console.log(render(await getStats(db, limit), limit));
+    return;
+  }
+  // The first load must work (a wrong --db fails here). After that, a failed
+  // refresh keeps the last stats on screen and tries again.
+  let screen = render(await getStats(db, limit), limit);
+  let failed = "";
+  for (;;) {
+    const status = failed
+      ? `${failed} · trying again in 10s`
+      : dim(`${new Date().toLocaleTimeString("en-GB")} · every 10s · ctrl-c to stop`);
+    console.clear();
+    console.log(`${status}\n\n${screen}`);
+    await sleep(10_000);
+    try {
+      screen = render(await getStats(db, limit), limit);
+      failed = "";
+    } catch (error) {
+      failed = (error as Error).message;
     }
-    console.log(render(stats, limit));
-    if (values.watch) await sleep(10_000);
-  } while (values.watch);
+  }
 }
 
 main().catch((error: Error) => {
