@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { resolveConfig } from "./config";
-import { ago, canHighlight, flag, place, plural } from "./core";
+import { ago, canComment, canHighlight, flag, MAX_NAME, parseComment, place, plural } from "./core";
 
 describe("resolveConfig", () => {
   it("needs a database and fills in the rest", () => {
@@ -10,6 +10,13 @@ describe("resolveConfig", () => {
     expect(config.apiRoute).toBe("/api/reactions");
     expect(config.thanks).toHaveLength(10);
     expect(config.pages).toBeNull();
+  });
+
+  it("keeps comments off until they are asked for", () => {
+    const config = resolveConfig({ database: "my-reactions" });
+    expect(config.comments).toBe(false);
+    expect(config.maxComments).toBe(20);
+    expect(config.maxCommentLength).toBe(2000);
   });
 
   it("drops the count-to-ten lines for another heart limit", () => {
@@ -23,6 +30,65 @@ describe("canHighlight", () => {
     expect(canHighlight(false, "/blog/a")).toBe(false);
     expect(canHighlight(["/blog/", "/notes/"], "/notes/a")).toBe(true);
     expect(canHighlight(["/blog/"], "/projects/a")).toBe(false);
+  });
+});
+
+describe("canComment", () => {
+  it("takes true, false or path prefixes", () => {
+    expect(canComment(false, "/blog/a")).toBe(false);
+    expect(canComment(true, "/blog/a")).toBe(true);
+    expect(canComment(["/blog/"], "/blog/a")).toBe(true);
+    expect(canComment(["/blog/"], "/uses")).toBe(false);
+  });
+});
+
+describe("parseComment", () => {
+  const limits = { maxLength: 20, maxQuote: 10 };
+
+  it("trims a comment on the whole page", () => {
+    expect(parseComment({ text: "  hello \n" }, limits)).toEqual({
+      name: null,
+      body: "hello",
+      quote: null,
+      start: null,
+    });
+  });
+
+  it("keeps the name on one line and caps it", () => {
+    expect(parseComment({ text: "hi", name: "  Ada \n Lovelace " }, limits)?.name).toBe(
+      "Ada Lovelace",
+    );
+    expect(parseComment({ text: "hi", name: "x".repeat(200) }, limits)?.name).toHaveLength(
+      MAX_NAME,
+    );
+    expect(parseComment({ text: "hi", name: "   " }, limits)?.name).toBeNull();
+  });
+
+  it("rejects text that is missing, empty or too long", () => {
+    expect(parseComment({}, limits)).toBeNull();
+    expect(parseComment({ text: "   " }, limits)).toBeNull();
+    expect(parseComment({ text: 5 }, limits)).toBeNull();
+    expect(parseComment({ text: "x".repeat(21) }, limits)).toBeNull();
+    expect(parseComment({ text: "x".repeat(20) }, limits)).not.toBeNull();
+  });
+
+  it("takes a passage with where it starts", () => {
+    expect(parseComment({ text: "yes", quote: " a line ", start: 12 }, limits)).toEqual({
+      name: null,
+      body: "yes",
+      quote: "a line",
+      start: 12,
+    });
+  });
+
+  it("rejects half a passage or a bad one", () => {
+    expect(parseComment({ text: "yes", quote: "a line" }, limits)).toBeNull();
+    expect(parseComment({ text: "yes", start: 3 }, limits)).toBeNull();
+    expect(parseComment({ text: "yes", quote: "  ", start: 3 }, limits)).toBeNull();
+    expect(parseComment({ text: "yes", quote: "x".repeat(11), start: 3 }, limits)).toBeNull();
+    expect(parseComment({ text: "yes", quote: "a line", start: -1 }, limits)).toBeNull();
+    expect(parseComment({ text: "yes", quote: "a line", start: 1.5 }, limits)).toBeNull();
+    expect(parseComment({ text: "yes", quote: "a line", start: "3" }, limits)).toBeNull();
   });
 });
 

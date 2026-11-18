@@ -6,11 +6,12 @@ One integration gives you:
 
 - **A pill fixed to the bottom of the page** with hearts, unique reads and reader highlights
 - **Highlights** drawn with the CSS Custom Highlight API, so your page's DOM is never changed
+- **Comments**, on a page or on a passage the reader selects (optional)
 - **An injected API endpoint** (`POST /api/reactions`)
 - **Stats components** for a public dashboard: totals, every page, recent activity
-- **Frontmatter switches**: `reactions: false` or `highlights: false` on any page
+- **Frontmatter switches**: `reactions: false`, `highlights: false` or `comments: false` on any page
 
-No cookies and no names. A reader is a random id kept in their browser, so each person counts once per page. Each heart and highlight stores the reader's city and country from Cloudflare.
+No cookies and no sign-in. A reader is a random id kept in their browser, so each person counts once per page. Each heart, highlight and comment stores the reader's city and country from Cloudflare. A comment can also carry a name, if the reader types one.
 
 Needs the [`@astrojs/cloudflare`](https://docs.astro.build/en/guides/integrations-guide/cloudflare/) adapter. The rest of your site can stay static. Only the endpoint and the stats page run on the server.
 
@@ -104,7 +105,7 @@ That's it. Open a page, give it a heart, select a sentence.
 <Reactions
   slug="/blog/my-post"            // the key reactions are kept under. Default: the current path
   highlights={false}              // hearts and reads only
-  frontmatter={entry.data}        // reads `reactions` and `highlights` from it
+  frontmatter={entry.data}        // reads `reactions`, `highlights` and `comments` from it
   when="html.classic"             // only show when <html> matches this selector
 />
 ```
@@ -134,7 +135,46 @@ Set a secret (`REACTIONS_ADMIN_TOKEN` by default):
 wrangler pages secret put REACTIONS_ADMIN_TOKEN   # .dev.vars locally
 ```
 
-Open any page with `#admin=<token>` once. From then on, that browser can delete anyone's highlights and its own reads don't count. `#admin=` forgets it. A fragment never reaches the server logs.
+Open any page with `#admin=<token>` once. From then on, that browser can delete anyone's highlights and comments, and its own reads don't count. `#admin=` forgets it. A fragment never reaches the server logs.
+
+## Comments
+
+Readers can comment on a page, or on one passage of it. Comments are off until you turn them on, with `true` or a list of path prefixes:
+
+```js
+reactions({
+  database: "my-site-reactions",
+  comments: ["/blog/"],
+});
+```
+
+Apply the new migration, then put `<Comments>` under the article:
+
+```sh
+wrangler d1 migrations apply my-site-reactions --local
+wrangler d1 migrations apply my-site-reactions --remote
+```
+
+```astro
+---
+import { Comments, Reactions } from 'astro-d1-reactions/components';
+---
+
+<article data-highlightable><slot /></article>
+<Comments frontmatter={entry.data} />
+<Reactions frontmatter={entry.data} />
+```
+
+| Prop          | Default      | Description                                          |
+| ------------- | ------------ | ---------------------------------------------------- |
+| `slug`        | current path | The key comments are kept under. `false`: no section |
+| `frontmatter` |              | `comments: false` in it hides the section            |
+
+**On a passage.** With `<Reactions>` on the page too, text selected inside `[data-highlightable]` gets a **Comment** button next to **Highlight**. It jumps to the comment form, which quotes the passage. The comment then shows the quote. The passage is not marked in the page text. Comment also shows where `highlights` is off, with no Highlight button beside it.
+
+A comment is plain text and an optional name. The browser remembers the name. With no name, it reads "someone from London". Comments show at once. Readers delete their own, and the admin deletes any. Nothing is HTML, so a comment cannot add markup or links.
+
+Anyone can make up reader ids, so on a public site add a Cloudflare rate limiting rule on the route. Each reader is also held to `maxComments` per page.
 
 ## Frontmatter
 
@@ -167,7 +207,14 @@ highlights: false # hearts and reads, no highlights
 ---
 ```
 
-Add the two keys to your collection schema:
+```md
+---
+title: A closed topic
+comments: false # no comments, and no Comment button on selected text
+---
+```
+
+Add the keys to your collection schema:
 
 ```ts
 // src/content.config.ts
@@ -357,21 +404,26 @@ Set any of these on `:root`. The package's defaults have zero specificity, so yo
 }
 ```
 
+The comment section is part of your page, so it takes the page's text colour and font. It uses `--rx-accent`, `--rx-heart` and `--rx-radius` if they are set. Or write rules for the `.comments-*` classes.
+
 ## Options
 
-| Option          | Default                   | Description                                                                      |
-| --------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| `database`      | required                  | D1 database name                                                                 |
-| `binding`       | `'REACTIONS_DB'`          | D1 binding name in wrangler config                                               |
-| `adminTokenEnv` | `'REACTIONS_ADMIN_TOKEN'` | Name of the admin token secret                                                   |
-| `apiRoute`      | `'/api/reactions'`        | Injected endpoint                                                                |
-| `highlights`    | `true`                    | Where readers may highlight: `true`, `false` or path prefixes, e.g. `['/blog/']` |
-| `maxHearts`     | `10`                      | Hearts one reader can give one page                                              |
-| `maxHighlights` | `50`                      | Highlights one reader can make on one page                                       |
-| `maxText`       | `1000`                    | Longest highlight, in characters                                                 |
-| `thanks`        | ten lines                 | The line shown for each heart given, in order                                    |
-| `icons`         | Phosphor icons            | See [Icons](#icons)                                                              |
-| `pages`         | every path                | What the stats page lists. See [The stats page](#the-stats-page)                 |
+| Option             | Default                   | Description                                                                            |
+| ------------------ | ------------------------- | -------------------------------------------------------------------------------------- |
+| `database`         | required                  | D1 database name                                                                       |
+| `binding`          | `'REACTIONS_DB'`          | D1 binding name in wrangler config                                                     |
+| `adminTokenEnv`    | `'REACTIONS_ADMIN_TOKEN'` | Name of the admin token secret                                                         |
+| `apiRoute`         | `'/api/reactions'`        | Injected endpoint                                                                      |
+| `highlights`       | `true`                    | Where readers may highlight: `true`, `false` or path prefixes, e.g. `['/blog/']`       |
+| `comments`         | `false`                   | Where readers may comment: `true`, `false` or path prefixes. See [Comments](#comments) |
+| `maxComments`      | `20`                      | Comments one reader can post on one page                                               |
+| `maxCommentLength` | `2000`                    | Longest comment, in characters                                                         |
+| `maxHearts`        | `10`                      | Hearts one reader can give one page                                                    |
+| `maxHighlights`    | `50`                      | Highlights one reader can make on one page                                             |
+| `maxText`          | `1000`                    | Longest highlight, or quoted passage, in characters                                    |
+| `thanks`           | ten lines                 | The line shown for each heart given, in order                                          |
+| `icons`            | Phosphor icons            | See [Icons](#icons)                                                                    |
+| `pages`            | every path                | What the stats page lists. See [The stats page](#the-stats-page)                       |
 
 ## The API
 
@@ -388,6 +440,18 @@ Set any of these on `:root`. The package's defaults have zero specificity, so yo
 | `heart`     |                 | Adds a heart, up to `maxHearts`               |
 | `highlight` | `text`, `start` | Saves a highlight (`start`: character offset) |
 | `delete`    | `id`            | Deletes your highlight, or anyone's as admin  |
+
+The comment actions return the page's comments instead of its state:
+
+```json
+{ "admin": false, "comments": [{ "id": 1, "name": null, "body": "…", "quote": null, "start": null, "mine": true, … }] }
+```
+
+| `action`         | Extra fields                        | Does                                                                                                                                |
+| ---------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `comments`       |                                     | Nothing. Just the comments, oldest first                                                                                            |
+| `comment`        | `text`, `name?`, `quote?`, `start?` | Saves a comment. `quote` and `start` go together. `400` if comments are off here or the text is not valid. `429` over `maxComments` |
+| `delete-comment` | `id`                                | Deletes your comment, or anyone's as admin                                                                                          |
 
 `slug` must match `/^\/[\w/-]{0,200}$/`. `visitor` is a UUID.
 

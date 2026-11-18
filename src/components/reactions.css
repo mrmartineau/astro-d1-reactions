@@ -322,7 +322,7 @@
   border-top: 1px solid var(--rx-line);
 }
 
-/* the Highlight button above a selection, and the note on a hovered mark */
+/* the Highlight and Comment buttons above a selection, and the note on a hovered mark */
 .reactions-add,
 .reactions-tip {
   position: fixed;
@@ -336,10 +336,34 @@
   left: var(--x);
   top: var(--y);
   translate: -50% calc(-100% - 0.5rem);
-  padding: 0.25rem 0.75rem;
   border-radius: 999px;
   background: var(--rx-text-bright);
   color: var(--rx-bg);
+  overflow: hidden;
+}
+
+/* Its own rule: a display here would otherwise beat the hidden attribute. */
+.reactions .reactions-add:not([hidden]) {
+  display: flex;
+}
+
+.reactions .reactions-add button {
+  padding: 0.25rem 0.75rem;
+  white-space: nowrap;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: color-mix(in oklch, var(--rx-bg) 12%, transparent);
+  }
+
+  & + button {
+    border-left: 1px solid color-mix(in oklch, var(--rx-bg) 25%, transparent);
+  }
 }
 
 .reactions-tip {

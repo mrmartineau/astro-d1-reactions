@@ -13,9 +13,14 @@
 // fill, other readers' a dotted underline. Hover one to see where and when it
 // was made.
 //
+// Where comments are on, and a <Comments> is on the page, the button above a
+// selection also has Comment. It does not save anything itself: it sends the
+// selection to <Comments> (the "reactions:comment" event), which quotes it in
+// its form.
+//
 // It starts `hidden`; the script unhides it.
 import config from 'virtual:astro-d1-reactions/config';
-import { canHighlight } from '../core';
+import { canComment, canHighlight } from '../core';
 import './reactions.css';
 
 interface Props {
@@ -28,9 +33,12 @@ interface Props {
   highlights?: boolean;
   /**
    * The page's frontmatter (or a content entry's `data`). `reactions: false`
-   * in it hides hearts and reads; `highlights: false` turns highlights off.
+   * in it hides hearts and reads; `highlights: false` turns highlights off;
+   * `comments: false` hides the Comment button.
    */
-  frontmatter?: { reactions?: boolean; highlights?: boolean } | Record<string, unknown>;
+  frontmatter?:
+    | { reactions?: boolean; highlights?: boolean; comments?: boolean }
+    | Record<string, unknown>;
   /** A CSS selector <html> must match for the pill to show, e.g. "html.classic". */
   when?: string;
 }
@@ -44,6 +52,9 @@ const marks =
   Astro.props.highlights !== false &&
   frontmatter.highlights !== false &&
   canHighlight(config.highlights, slug!);
+// The script also checks that a <Comments> is on the page before it shows Comment.
+const discuss =
+  Boolean(slug) && frontmatter.comments !== false && canComment(config.comments, slug!);
 const extra = Astro.slots.has('default');
 const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
 ---
@@ -114,11 +125,23 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
             <p class="reactions-foot" />
           </div>
 
-          <button type="button" class="reactions-add" hidden>
-            Highlight
-          </button>
           <div class="reactions-tip" role="tooltip" hidden />
         </>
+      )}
+
+      {(marks || discuss) && (
+        <div class="reactions-add" hidden>
+          {marks && (
+            <button type="button" data-add="highlight">
+              Highlight
+            </button>
+          )}
+          {discuss && (
+            <button type="button" data-add="comment" hidden>
+              Comment
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
@@ -204,7 +227,9 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
     const root = panel && document.querySelector<HTMLElement>('[data-highlightable]');
     const heart = box.querySelector<HTMLButtonElement>('.reactions-heart')!;
     const reads = box.querySelector<HTMLElement>('[data-reads]')!;
-    const add = box.querySelector<HTMLButtonElement>('.reactions-add');
+    const add = box.querySelector<HTMLElement>('.reactions-add');
+    const addHighlight = add?.querySelector<HTMLButtonElement>('[data-add="highlight"]');
+    const addComment = add?.querySelector<HTMLButtonElement>('[data-add="comment"]');
     const tip = box.querySelector<HTMLElement>('.reactions-tip');
     const filters = [...box.querySelectorAll<HTMLButtonElement>('[data-show]')];
     const canDraw = 'highlights' in CSS;
@@ -424,32 +449,40 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
       });
     }
 
-    if (root && add && tip) {
-      const placeAdd = () => {
+    // Selected text gets a button above it: Highlight, and Comment where
+    // comments are on. The article is the same element the marks live in, but
+    // it is found here too, so Comment works where highlights are off.
+    let placeAdd = () => {};
+    const article = add && document.querySelector<HTMLElement>('[data-highlightable]');
+    if (article && add) {
+      placeAdd = () => {
         if (!pending) return;
         const rect = pending.range.getBoundingClientRect();
         add.style.setProperty('--x', `${rect.left + rect.width / 2}px`);
         add.style.setProperty('--y', `${rect.top}px`);
       };
 
-      // Show the Highlight button above a selection inside root.
+      // Show the buttons above a selection inside the article.
       const onSelection = () => {
         const selection = document.getSelection();
         const range = selection?.rangeCount ? selection.getRangeAt(0) : undefined;
         const raw = range?.toString() ?? '';
         const text = raw.trim();
+        // Comment needs a <Comments> on the page: it is where the comment is written.
+        if (addComment) addComment.hidden = !document.querySelector('[data-comments]');
         if (
           !range ||
           !text ||
           text.length > maxText ||
-          !root.contains(range.commonAncestorContainer)
+          !(addHighlight || (addComment && !addComment.hidden)) ||
+          !article.contains(range.commonAncestorContainer)
         ) {
           pending = undefined;
           add.hidden = true;
           return;
         }
         const before = document.createRange();
-        before.setStart(root, 0);
+        before.setStart(article, 0);
         before.setEnd(range.startContainer, range.startOffset);
         const lead = raw.length - raw.trimStart().length;
         pending = { text, start: before.toString().length + lead, range };
@@ -458,14 +491,26 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
       };
       document.addEventListener('selectionchange', onSelection, { signal });
 
-      // Keep the selection when the button is pressed.
+      // Keep the selection when a button is pressed.
       add.addEventListener('mousedown', (event) => event.preventDefault());
-      add.addEventListener('click', () => {
+      addHighlight?.addEventListener('click', () => {
         if (!pending) return;
         send({ action: 'highlight', text: pending.text, start: pending.start });
         document.getSelection()?.removeAllRanges();
       });
+      addComment?.addEventListener('click', () => {
+        if (!pending) return;
+        // <Comments> listens: it quotes the passage in its form and focuses it.
+        document.dispatchEvent(
+          new CustomEvent('reactions:comment', {
+            detail: { quote: pending.text, start: pending.start },
+          }),
+        );
+        document.getSelection()?.removeAllRanges();
+      });
+    }
 
+    if (root && tip) {
       // The marks aren't elements, so find the one under the pointer.
       let frame = 0;
       root.addEventListener('pointermove', ({ clientX: x, clientY: y }) => {
@@ -489,10 +534,14 @@ const icon = (svg: string) => svg.replace('<svg', '<svg aria-hidden="true"');
         cancelAnimationFrame(frame);
         tip.hidden = true;
       });
+    }
+
+    // Scrolling moves the passage: hide the hover note, follow with the buttons.
+    if (tip || add) {
       window.addEventListener(
         'scroll',
         () => {
-          tip.hidden = true;
+          if (tip) tip.hidden = true;
           placeAdd();
         },
         { passive: true, signal },

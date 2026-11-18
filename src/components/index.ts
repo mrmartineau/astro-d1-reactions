@@ -1,3 +1,4 @@
+export { default as Comments } from "./Comments.astro";
 export { default as Reactions } from "./Reactions.astro";
 export { default as Stats } from "./Stats.astro";
 export { default as StatsActivity } from "./StatsActivity.astro";

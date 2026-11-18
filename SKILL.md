@@ -1,14 +1,15 @@
 ---
 name: astro-d1-reactions
-description: "Add page reactions to an Astro site with the astro-d1-reactions integration: hearts, unique reads and reader highlights in a pill at the bottom of the page, kept in Cloudflare D1, plus a public /stats dashboard. Covers the D1 database and binding, the shipped migrations, the integration, the <Reactions /> pill, frontmatter switches, the stats page, the admin token, icons, theming and the failure modes. Use when asked to add hearts, likes, reactions, read counts, view counts, reader highlights or a stats page to an Astro site, or to work with an existing astro-d1-reactions setup."
+description: "Add page reactions to an Astro site with the astro-d1-reactions integration: hearts, unique reads, reader highlights and comments (on a page or on selected text) in a pill at the bottom of the page, kept in Cloudflare D1, plus a public /stats dashboard. Covers the D1 database and binding, the shipped migrations, the integration, the <Reactions /> pill, the <Comments /> section, frontmatter switches, the stats page, the admin token, icons, theming and the failure modes. Use when asked to add hearts, likes, reactions, read counts, view counts, reader highlights, comments or a stats page to an Astro site, or to work with an existing astro-d1-reactions setup."
 ---
 
 # astro-d1-reactions
 
-Hearts, unique reads and reader highlights for Astro pages, kept in Cloudflare
-D1. One integration injects `POST /api/reactions`. One component, `<Reactions />`,
-draws a pill fixed to the bottom of the page. A second component, `<Stats />`,
-is a whole dashboard.
+Hearts, unique reads, reader highlights and comments for Astro pages, kept in
+Cloudflare D1. One integration injects `POST /api/reactions`. One component,
+`<Reactions />`, draws a pill fixed to the bottom of the page. A second,
+`<Comments />`, is a comment section for the bottom of the article. A third,
+`<Stats />`, is a whole dashboard.
 
 Needs the `@astrojs/cloudflare` adapter. The site can stay `output: 'static'`.
 Only the API route and the stats page run on the server.
@@ -113,8 +114,8 @@ Ask the user only for what you cannot find: the database name (default to
    <Reactions />
    ```
 
-7. Optional: the stats page, the frontmatter switches and the admin token
-   (below).
+7. Optional: comments, the stats page, the frontmatter switches and the admin
+   token (below).
 
 8. Check it: run `pnpm dev`, open a page, give it a heart, select a sentence and
    click **Highlight**. Reload. The counts must stay.
@@ -125,7 +126,7 @@ Ask the user only for what you cannot find: the database name (default to
 <Reactions
   slug="/blog/my-post"     // key for this page's reactions. Default: current path, no trailing slash
   highlights={false}       // hearts and reads only
-  frontmatter={entry.data} // reads `reactions` and `highlights` from it
+  frontmatter={entry.data} // reads `reactions`, `highlights` and `comments` from it
   when="html.classic"      // show only when <html> matches this selector
 />
 ```
@@ -171,7 +172,7 @@ const blog = defineCollection({
 ```
 
 Then `reactions: false` in a post hides everything. `highlights: false` keeps
-hearts and reads.
+hearts and reads. `comments: false` hides the comments and the Comment button.
 
 ### Pages without frontmatter
 
@@ -196,6 +197,42 @@ const { reactions } = Astro.props;
 - `{ slug: false }`: no hearts or reads.
 - Do not put `'/'` in the `highlights` option for the homepage. It matches the
   start of the path, so it turns highlights on for every page.
+
+## Comments
+
+Optional. Readers comment on a page, or on a passage they select. Off by
+default. Ask the user where they want comments before you turn them on.
+
+1. Turn them on, with `true` or path prefixes:
+
+   ```js
+   reactions({ database: "my-site-reactions", comments: ["/blog/"] });
+   ```
+
+2. Apply the migrations again, locally, then (after asking) `--remote`. The new
+   one makes the `comments` table.
+3. Put `<Comments />` under the article, with the same `slug` and `frontmatter`
+   as the pill:
+
+   ```astro
+   <article data-highlightable><slot /></article>
+   <Comments frontmatter={entry.data} />
+   <Reactions frontmatter={entry.data} />
+   ```
+
+- `slug` defaults to the current path. `slug={false}` hides the section.
+- With `<Reactions />` on the page too, selected text inside
+  `[data-highlightable]` gets a **Comment** button next to **Highlight**. It
+  jumps to the comment form, which quotes the passage. The quote shows with the
+  comment. The passage is not marked in the page text.
+- Comment also works where `highlights` is off. Only that button shows.
+- Add `comments` to the collection schema through `reactionsSchema`, as with the
+  other switches.
+- Comments show at once. There is no approval step. The admin token deletes any
+  comment. Each reader gets `maxComments` per page.
+- On a public site, suggest a Cloudflare rate limiting rule on the route.
+  Anyone can make up reader ids.
+- Text only. Do not add markdown or HTML rendering.
 
 ## The stats page
 
@@ -255,7 +292,7 @@ can't read the `pages` option. Offer to add scripts to the site's
 
 ## Admin token
 
-The admin can delete any highlight. The admin's own reads do not count.
+The admin can delete any highlight or comment. The admin's own reads do not count.
 
 ```sh
 pnpm wrangler pages secret put REACTIONS_ADMIN_TOKEN   # Pages
@@ -268,19 +305,22 @@ clears it.
 
 ## Options
 
-| Option          | Default                   | Note                                                    |
-| --------------- | ------------------------- | ------------------------------------------------------- |
-| `database`      | required                  | Name from `wrangler d1 create`                          |
-| `binding`       | `'REACTIONS_DB'`          | Must match the wrangler config                          |
-| `adminTokenEnv` | `'REACTIONS_ADMIN_TOKEN'` | Name of the admin secret                                |
-| `apiRoute`      | `'/api/reactions'`        | The injected endpoint                                   |
-| `highlights`    | `true`                    | `true`, `false`, or path prefixes such as `['/blog/']`  |
-| `maxHearts`     | `10`                      | Per reader, per page                                    |
-| `maxHighlights` | `50`                      | Per reader, per page                                    |
-| `maxText`       | `1000`                    | Longest highlight, in characters                        |
-| `thanks`        | ten lines                 | Line per heart. Only the default when `maxHearts` is 10 |
-| `icons`         | Phosphor                  | `heart`, `highlighter`, `eye`, `trash`, `users`         |
-| `pages`         | every path                | What the stats page lists                               |
+| Option             | Default                   | Note                                                    |
+| ------------------ | ------------------------- | ------------------------------------------------------- |
+| `database`         | required                  | Name from `wrangler d1 create`                          |
+| `binding`          | `'REACTIONS_DB'`          | Must match the wrangler config                          |
+| `adminTokenEnv`    | `'REACTIONS_ADMIN_TOKEN'` | Name of the admin secret                                |
+| `apiRoute`         | `'/api/reactions'`        | The injected endpoint                                   |
+| `highlights`       | `true`                    | `true`, `false`, or path prefixes such as `['/blog/']`  |
+| `comments`         | `false`                   | `true`, `false`, or path prefixes such as `['/blog/']`  |
+| `maxComments`      | `20`                      | Per reader, per page                                    |
+| `maxCommentLength` | `2000`                    | Longest comment, in characters                          |
+| `maxHearts`        | `10`                      | Per reader, per page                                    |
+| `maxHighlights`    | `50`                      | Per reader, per page                                    |
+| `maxText`          | `1000`                    | Longest highlight or quoted passage, in characters      |
+| `thanks`           | ten lines                 | Line per heart. Only the default when `maxHearts` is 10 |
+| `icons`            | Phosphor                  | `heart`, `highlighter`, `eye`, `trash`, `users`         |
+| `pages`            | every path                | What the stats page lists                               |
 
 Icons take SVG markup or a path to an `.svg` file from the project root. Use
 `fill="currentColor"` or `stroke="currentColor"`.
@@ -293,20 +333,24 @@ any rule wins.
 
 ## Troubleshooting
 
-| Symptom                                            | Cause                                                                                   |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Startup warning about the wrangler config          | The config does not contain the binding and database names. Add the snippet it prints   |
-| `500`, `D1 binding "REACTIONS_DB" not found`       | Binding missing or misspelled, or `platformProxy` not on in dev                         |
-| `no such table: views` (or `hearts`, `highlights`) | Migrations not applied. Run them with `--local` for dev, `--remote` for production      |
-| `400 Invalid slug`                                 | The path has a character outside `[A-Za-z0-9_/-]`, such as a dot. Pass a `slug` prop    |
-| Pill does not show                                 | `when` does not match, `reactions: false` in frontmatter, or the script did not run     |
-| No highlight button                                | `highlights` option, prop or frontmatter turns it off for this path                     |
-| Selecting text does nothing                        | No `[data-highlightable]` element, or the selection is outside it                       |
-| Highlights in the list but not drawn on the page   | Browser without the CSS Custom Highlight API, or the text changed since                 |
-| Stats page fails at build                          | Missing `export const prerender = false`                                                |
-| A page is missing from the stats                   | Not in `pages`, a `draft`, or its `url` differs from the pill's `slug` (trailing slash) |
-| Your own reads do not count                        | This browser has the admin token. Open a page with `#admin=` to clear it                |
-| Counts reset for every reader                      | The `slug` for the page changed. Old counts are still under the old key                 |
+| Symptom                                                        | Cause                                                                                                        |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Startup warning about the wrangler config                      | The config does not contain the binding and database names. Add the snippet it prints                        |
+| `500`, `D1 binding "REACTIONS_DB" not found`                   | Binding missing or misspelled, or `platformProxy` not on in dev                                              |
+| `no such table: views` (or `hearts`, `highlights`, `comments`) | Migrations not applied. Run them with `--local` for dev, `--remote` for production                           |
+| `400 Invalid slug`                                             | The path has a character outside `[A-Za-z0-9_/-]`, such as a dot. Pass a `slug` prop                         |
+| Pill does not show                                             | `when` does not match, `reactions: false` in frontmatter, or the script did not run                          |
+| No highlight button                                            | `highlights` option, prop or frontmatter turns it off for this path                                          |
+| No Comment button on selected text                             | `comments` is off for this path or in frontmatter, no `<Comments />` on the page, or no `<Reactions />`      |
+| No comment section                                             | `comments` option is `false` or does not match the path, `comments: false` in frontmatter, or `slug={false}` |
+| `400 Comments are off on this page`                            | The `slug` does not match the `comments` option. Slugs match the start of the path                           |
+| `429` when posting a comment                                   | That reader is at `maxComments` for this page                                                                |
+| Selecting text does nothing                                    | No `[data-highlightable]` element, or the selection is outside it                                            |
+| Highlights in the list but not drawn on the page               | Browser without the CSS Custom Highlight API, or the text changed since                                      |
+| Stats page fails at build                                      | Missing `export const prerender = false`                                                                     |
+| A page is missing from the stats                               | Not in `pages`, a `draft`, or its `url` differs from the pill's `slug` (trailing slash)                      |
+| Your own reads do not count                                    | This browser has the admin token. Open a page with `#admin=` to clear it                                     |
+| Counts reset for every reader                                  | The `slug` for the page changed. Old counts are still under the old key                                      |
 
 ## Rules
 
