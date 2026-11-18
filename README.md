@@ -274,6 +274,35 @@ const stats = await loadStats();
 
 `stats.rows`, `stats.activity` and `stats.totals` are plain data, so you can also render them yourself.
 
+### In the terminal
+
+Run this in your site's folder:
+
+```sh
+npx astro-d1-reactions stats
+```
+
+```
+4,812 reads · 1,203 readers · 318 hearts · 41 highlights
+
+PAGE                                       READS       ♥       ✎
+/blog/d1-is-good                           1,940     122      17
+/notes/astro-7                               801      40       3
+
+LATEST
+  2m  ♥ ×3  /blog/d1-is-good  🇩🇪 Berlin, Germany
+  9m  ✎ "the best code is the code never written"  /blog/d1-is-good  🇯🇵 Tokyo, Japan
+```
+
+It asks D1 through `wrangler d1 execute`, so it uses your wrangler config and login. It only reads. It lists every path, because it can't read the `pages` option.
+
+| Flag          | Default        | What it does                                |
+| ------------- | -------------- | ------------------------------------------- |
+| `--db <name>` | `REACTIONS_DB` | D1 binding or database name                 |
+| `--local`     | off            | Read the local dev database, not the remote |
+| `--limit <n>` | `20`           | Rows in each list                           |
+| `--watch`     | off            | Refresh every 10 seconds                    |
+
 ## Icons
 
 Swap any icon. Give SVG markup, or a path to an `.svg` file from the project root:
