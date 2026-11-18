@@ -215,6 +215,10 @@ default. Ask the user where they want comments before you turn them on.
    as the pill:
 
    ```astro
+   ---
+   import { Comments, Reactions } from 'astro-d1-reactions/components';
+   const { entry } = Astro.props;
+   ---
    <article data-highlightable><slot /></article>
    <Comments frontmatter={entry.data} />
    <Reactions frontmatter={entry.data} />
@@ -226,6 +230,8 @@ default. Ask the user where they want comments before you turn them on.
   jumps to the comment form, which quotes the passage. The quote shows with the
   comment. The passage is not marked in the page text.
 - Comment also works where `highlights` is off. Only that button shows.
+- `reactions: false` in frontmatter also removes the Comment button, because the
+  pill carries it. The comment section stays.
 - Add `comments` to the collection schema through `reactionsSchema`, as with the
   other switches.
 - Comments show at once. There is no approval step. The admin token deletes any
@@ -345,7 +351,7 @@ any rule wins.
 | No highlight button                                            | `highlights` option, prop or frontmatter turns it off for this path                                          |
 | No Comment button on selected text                             | `comments` is off for this path or in frontmatter, no `<Comments />` on the page, or no `<Reactions />`      |
 | No comment section                                             | `comments` option is `false` or does not match the path, `comments: false` in frontmatter, or `slug={false}` |
-| `400 Comments are off on this page`                            | The `slug` does not match the `comments` option. Slugs match the start of the path                           |
+| `400 Comments are off on this page.`                           | The `slug` does not match the `comments` option. Slugs match the start of the path                           |
 | `429` when posting a comment                                   | That reader is at `maxComments` for this page                                                                |
 | Selecting text does nothing                                    | No `[data-highlightable]` element, or the selection is outside it                                            |
 | Highlights in the list but not drawn on the page               | Browser without the CSS Custom Highlight API, or the text changed since                                      |

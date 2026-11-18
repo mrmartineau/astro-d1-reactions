@@ -77,8 +77,10 @@ describe("parseComment", () => {
       name: null,
       body: "yes",
       quote: "a line",
-      start: 12,
+      // the quote lost one leading space, so the start moves with it
+      start: 13,
     });
+    expect(parseComment({ text: "yes", quote: "a line", start: 12 }, limits)?.start).toBe(12);
   });
 
   it("rejects half a passage or a bad one", () => {

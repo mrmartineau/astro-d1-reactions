@@ -11,7 +11,7 @@
 //
 // It starts `hidden`; the script unhides it.
 import config from 'virtual:astro-d1-reactions/config';
-import { canComment } from '../core';
+import { canComment, MAX_NAME } from '../core';
 import './comments.css';
 
 interface Props {
@@ -58,7 +58,7 @@ const show = Boolean(slug) && canComment(config.comments, slug!);
 
         <label class="comments-field">
           <span>Name (optional)</span>
-          <input class="comments-input" name="name" maxlength="60" autocomplete="nickname" />
+          <input class="comments-input" name="name" maxlength={MAX_NAME} autocomplete="nickname" />
         </label>
         <label class="comments-field">
           <span>Comment</span>

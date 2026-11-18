@@ -16,3 +16,5 @@ CREATE TABLE comments (
   CHECK ((quote IS NULL) = (start IS NULL))
 );
 CREATE INDEX comments_slug ON comments (slug, created_at);
+-- The per-reader cap counts one reader's comments on one page.
+CREATE INDEX comments_slug_visitor ON comments (slug, visitor);

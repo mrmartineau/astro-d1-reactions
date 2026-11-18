@@ -108,7 +108,8 @@ export function parseComment(
   if (hasQuote !== (input.start != null)) return null;
   if (!hasQuote) return { name, body, quote: null, start: null };
 
-  const quote = typeof input.quote === "string" ? input.quote.trim() : "";
+  const rawQuote = typeof input.quote === "string" ? input.quote : "";
+  const quote = rawQuote.trim();
   const { start } = input;
   if (
     !quote ||
@@ -119,7 +120,9 @@ export function parseComment(
   ) {
     return null;
   }
-  return { name, body, quote, start };
+  // `start` is where the untrimmed quote begins. The stored quote is trimmed,
+  // so move `start` past the leading whitespace to keep them in step.
+  return { name, body, quote, start: start + (rawQuote.length - rawQuote.trimStart().length) };
 }
 
 /** Every comment on one page, oldest first, as one reader sees them. */
