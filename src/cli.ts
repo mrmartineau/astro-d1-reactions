@@ -48,8 +48,12 @@ function render(stats: Stats, limit: number) {
     "",
     dim("LATEST"),
     ...stats.activity.map((a) => {
+      // Anyone can post a highlight, so drop control characters: an escape
+      // code could clear or rewrite the owner's terminal.
       const what =
-        a.kind === "heart" ? `♥ ×${a.n}` : `✎ "${cut((a.text ?? "").replace(/\s+/g, " "), 40)}"`;
+        a.kind === "heart"
+          ? `♥ ×${a.n}`
+          : `✎ "${cut((a.text ?? "").replace(/[\s\p{Cc}]+/gu, " "), 40)}"`;
       const where = [flag(a.country), place(a.city, a.country)].filter(Boolean).join(" ");
       return `${ago(a.at).padStart(4)}  ${what}  ${a.slug}${where ? dim(`  ${where}`) : ""}`;
     }),

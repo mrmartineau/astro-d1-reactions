@@ -11,9 +11,12 @@ import type { D1Like, D1Statement } from "./core";
  * assumes no `?` sits inside a string literal.
  */
 export function inlineValues(sql: string, values: unknown[]) {
-  let next = 0;
-  return sql.replace(/\?(\d*)/g, (_, index: string) => {
-    const value = values[index ? Number(index) - 1 : next++];
+  // Like SQLite, a bare `?` takes the slot after the highest one so far.
+  let last = 0;
+  return sql.replace(/\?(\d*)/g, (_, digits: string) => {
+    const slot = digits ? Number(digits) : last + 1;
+    last = Math.max(last, slot);
+    const value = values[slot - 1];
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error(`Can't inline ${String(value)}: numbers only`);
     }
@@ -41,14 +44,18 @@ export function wranglerD1(db: string, local: boolean): D1Like {
       const output = await execFileAsync(
         "npx",
         ["wrangler", "d1", "execute", db, where, "--json", "--command", sql],
-        { maxBuffer: 64 * 1024 * 1024 },
+        // A hung wrangler would freeze --watch, so give up after a minute.
+        { maxBuffer: 64 * 1024 * 1024, timeout: 60_000 },
       ).then(
         (result) => result.stdout,
         // Not error.message: it holds the whole command, SQL and all.
-        (error: { stdout?: string; stderr?: string }) => error.stdout || error.stderr || "",
+        (error: { stdout?: string; stderr?: string; killed?: boolean }) =>
+          error.stdout || error.stderr || (error.killed ? "wrangler took over a minute" : ""),
       );
       // With --json, wrangler prints the results, or {"error":{"text":"…"}}.
-      // It sends SQL NULL as the string "null": only city and country are NULL.
+      // It sends SQL NULL as the string "null". Only city and country are
+      // turned back: `text` is NULL on heart rows, which never show it, and a
+      // highlight's text may really be "null".
       let parsed: unknown;
       try {
         parsed = JSON.parse(output, (key, value) =>
