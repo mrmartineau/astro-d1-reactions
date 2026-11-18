@@ -174,6 +174,8 @@ import { Comments, Reactions } from 'astro-d1-reactions/components';
 
 A comment is plain text and an optional name. The browser remembers the name. With no name, it reads "someone from London". Comments show at once. Readers delete their own, and the admin deletes any. Nothing is HTML, so a comment cannot add markup or links.
 
+`comments: false` in frontmatter hides the section and the Comment button. It does not close the API: the route only knows the `comments` option. To keep a path closed, leave it out of that option.
+
 Anyone can make up reader ids, so on a public site add a Cloudflare rate limiting rule on the route. Each reader is also held to `maxComments` per page.
 
 ## Frontmatter

@@ -68,8 +68,14 @@ export const POST: APIRoute = async ({ request }) => {
         maxLength: config.maxCommentLength,
         maxQuote: config.maxText,
       });
+      // parseComment also rejects a bad quote, so the message covers both.
       if (!comment) {
-        return json({ error: `A comment is 1 to ${config.maxCommentLength} characters.` }, 400);
+        return json(
+          {
+            error: `Invalid comment: it needs 1 to ${config.maxCommentLength} characters, and a quoted passage needs its start.`,
+          },
+          400,
+        );
       }
       const saved = (await db
         .prepare(

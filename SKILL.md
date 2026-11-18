@@ -232,6 +232,8 @@ default. Ask the user where they want comments before you turn them on.
   comment. Each reader gets `maxComments` per page.
 - On a public site, suggest a Cloudflare rate limiting rule on the route.
   Anyone can make up reader ids.
+- `comments: false` in frontmatter only hides the UI. The route checks the
+  `comments` option alone. To close a path for good, leave it out of the option.
 - Text only. Do not add markdown or HTML rendering.
 
 ## The stats page
