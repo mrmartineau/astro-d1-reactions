@@ -341,6 +341,31 @@ Theme with CSS custom properties on `:root`: `--rx-bg`, `--rx-line`,
 `--rx-stats-tile`, `--rx-stats-radius`. The defaults have zero specificity, so
 any rule wins.
 
+## Upgrading
+
+For a site that already runs the package:
+
+1. Update the package with the project's package manager.
+2. Apply the new migrations, locally, then (after asking) `--remote`. They only
+   add. If the user shares the database with another site, say so before
+   `--remote`: it is still safe.
+3. A new feature stays off until its option is set. `comments` is `false` by
+   default. Do not turn it on unless the user asks. `0003_comments.sql` can be
+   skipped if they never want comments. If they turn comments on without it,
+   the comment actions answer `500` (`no such table: comments`). The rest of
+   the page still works, and it is fixed the moment the migration runs.
+4. If the user copied `migrations/` into their own folder instead of pointing
+   `migrations_dir` into `node_modules`, copy the new files too.
+5. The tooltip above selected text is now a `<div class="reactions-add">` around
+   the Highlight and Comment buttons, not a single `<button>`. If the site's
+   CSS styles `.reactions-add` as a button, point it at `.reactions-add button`.
+
+Migrations: `0001_init.sql` makes `views`, `hearts` and `highlights`.
+`0002_heart_activity.sql` adds when and where a heart was given. Hearts write
+those columns, so it is needed for hearts as well as the stats feed.
+`0003_comments.sql` makes `comments`. There are no down migrations. To go
+back to an older version, leave the table: the older version never reads it.
+
 ## Troubleshooting
 
 | Symptom                                                        | Cause                                                                                                        |

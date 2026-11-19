@@ -148,7 +148,7 @@ reactions({
 });
 ```
 
-Apply the new migration, then put `<Comments>` under the article:
+Apply the new migration (see [Upgrading](#upgrading)), then put `<Comments>` under the article:
 
 ```sh
 wrangler d1 migrations apply my-site-reactions --local
@@ -470,6 +470,44 @@ import { getState, getStats, place, flag, ago } from "astro-d1-reactions/core";
 
 const stats = await getStats(env.REACTIONS_DB);
 ```
+
+## Upgrading
+
+Update the package, then apply any new migrations. Migrations only add, so your readers' hearts, reads and highlights are never touched.
+
+```sh
+pnpm update astro-d1-reactions
+wrangler d1 migrations apply my-site-reactions --local    # for astro dev
+wrangler d1 migrations apply my-site-reactions --remote   # for production
+```
+
+Use your own database name. `migrations_dir` in your wrangler config points into `node_modules/astro-d1-reactions`, so new migration files arrive with the package. If you copied the migrations into your own folder instead, copy the new ones too.
+
+| Migration                 | Adds                                                 | Needed for                 |
+| ------------------------- | ---------------------------------------------------- | -------------------------- |
+| `0001_init.sql`           | `views`, `hearts`, `highlights`                      | everything                 |
+| `0002_heart_activity.sql` | when and where a heart was given, for the stats feed | hearts, and the stats page |
+| `0003_comments.sql`       | the `comments` table                                 | [Comments](#comments)      |
+
+### Adding comments to a site that already runs it
+
+Nothing changes until you turn comments on. They are off by default, and no existing page changes.
+
+1. Apply `0003_comments.sql`, as above. The `--remote` run changes your live database. If another site shares that database, that is fine: the migration only adds a table.
+2. Set the `comments` option. See [Comments](#comments).
+3. Put `<Comments />` on the pages.
+
+Turn comments on before you apply the migration and the comments API answers `500` (`no such table: comments` in your logs), so the form shows "Something went wrong". The rest of the page, hearts and highlights keep working. Apply the migration and it works at once. Nothing needs a rebuild.
+
+You can skip `0003` if you never want comments. Nothing reads the table until you turn them on.
+
+### One markup change
+
+The button above selected text used to be a `<button class="reactions-add">`. It is now a `<div class="reactions-add">` that holds the **Highlight** and **Comment** buttons. The class is not part of the documented theme. If your own CSS styles it as a button, point those rules at `.reactions-add button`.
+
+### Going back
+
+Wrangler has no down migrations. If you install an older version, leave the `comments` table in place. The older version never reads it.
 
 ## More Astro packages
 
