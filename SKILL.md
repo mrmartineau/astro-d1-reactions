@@ -235,7 +235,8 @@ default. Ask the user where they want comments before you turn them on.
 - Add `comments` to the collection schema through `reactionsSchema`, as with the
   other switches.
 - Comments show at once. There is no approval step. The admin token deletes any
-  comment. Each reader gets `maxComments` per page.
+  comment. Each reader gets `maxComments` per page, and a page holds
+  `maxPageComments` in all.
 - On a public site, suggest a Cloudflare rate limiting rule on the route.
   Anyone can make up reader ids.
 - `comments: false` in frontmatter only hides the UI. The route checks the
@@ -322,6 +323,7 @@ clears it.
 | `highlights`       | `true`                    | `true`, `false`, or path prefixes such as `['/blog/']`  |
 | `comments`         | `false`                   | `true`, `false`, or path prefixes such as `['/blog/']`  |
 | `maxComments`      | `20`                      | Per reader, per page                                    |
+| `maxPageComments`  | `200`                     | Per page, from every reader. A full page takes no more  |
 | `maxCommentLength` | `2000`                    | Longest comment, in characters                          |
 | `maxHearts`        | `10`                      | Per reader, per page                                    |
 | `maxHighlights`    | `50`                      | Per reader, per page                                    |
@@ -352,7 +354,7 @@ any rule wins.
 | No Comment button on selected text                             | `comments` is off for this path or in frontmatter, no `<Comments />` on the page, or no `<Reactions />`      |
 | No comment section                                             | `comments` option is `false` or does not match the path, `comments: false` in frontmatter, or `slug={false}` |
 | `400 Comments are off on this page.`                           | The `slug` does not match the `comments` option. Slugs match the start of the path                           |
-| `429` when posting a comment                                   | That reader is at `maxComments` for this page                                                                |
+| `429` when posting a comment                                   | That reader is at `maxComments` for this page, or the page holds `maxPageComments`                           |
 | Selecting text does nothing                                    | No `[data-highlightable]` element, or the selection is outside it                                            |
 | Highlights in the list but not drawn on the page               | Browser without the CSS Custom Highlight API, or the text changed since                                      |
 | Stats page fails at build                                      | Missing `export const prerender = false`                                                                     |

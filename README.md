@@ -177,7 +177,7 @@ A comment is plain text and an optional name. The browser remembers the name. Wi
 
 `comments: false` in frontmatter hides the section and the Comment button. It does not close the API: the route only knows the `comments` option. To keep a path closed, leave it out of that option. `reactions: false` also removes the Comment button, because the pill carries it. The section stays.
 
-Anyone can make up reader ids, so on a public site add a Cloudflare rate limiting rule on the route. Each reader is also held to `maxComments` per page.
+Anyone can make up reader ids, so on a public site add a Cloudflare rate limiting rule on the route. Each reader is also held to `maxComments` per page. A page holds at most `maxPageComments` in all, so the list it loads has a ceiling, even when someone makes up reader ids.
 
 ## Frontmatter
 
@@ -420,6 +420,7 @@ The comment section is part of your page, so it takes the page's text colour and
 | `highlights`       | `true`                    | Where readers may highlight: `true`, `false` or path prefixes, e.g. `['/blog/']`       |
 | `comments`         | `false`                   | Where readers may comment: `true`, `false` or path prefixes. See [Comments](#comments) |
 | `maxComments`      | `20`                      | Comments one reader can post on one page                                               |
+| `maxPageComments`  | `200`                     | Comments one page can hold, from every reader. A full page takes no more               |
 | `maxCommentLength` | `2000`                    | Longest comment, in characters                                                         |
 | `maxHearts`        | `10`                      | Hearts one reader can give one page                                                    |
 | `maxHighlights`    | `50`                      | Highlights one reader can make on one page                                             |
@@ -450,11 +451,11 @@ The comment actions return the page's comments instead of its state:
 { "admin": false, "comments": [{ "id": 1, "name": null, "body": "…", "quote": null, "start": null, "mine": true, … }] }
 ```
 
-| `action`         | Extra fields                        | Does                                                                                                                                |
-| ---------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `comments`       |                                     | Nothing. Just the comments, oldest first                                                                                            |
-| `comment`        | `text`, `name?`, `quote?`, `start?` | Saves a comment. `quote` and `start` go together. `400` if comments are off here or the text is not valid. `429` over `maxComments` |
-| `delete-comment` | `id`                                | Deletes your comment, or anyone's as admin                                                                                          |
+| `action`         | Extra fields                        | Does                                                                                                                                                                          |
+| ---------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `comments`       |                                     | Nothing. Just the comments, oldest first                                                                                                                                      |
+| `comment`        | `text`, `name?`, `quote?`, `start?` | Saves a comment. `quote` and `start` go together. `400` if comments are off here or the text is not valid. `429` over `maxComments`, or when the page holds `maxPageComments` |
+| `delete-comment` | `id`                                | Deletes your comment, or anyone's as admin                                                                                                                                    |
 
 `slug` must match `/^\/[\w/-]{0,200}$/`. `visitor` is a UUID.
 

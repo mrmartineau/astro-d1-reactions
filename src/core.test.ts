@@ -16,6 +16,7 @@ describe("resolveConfig", () => {
     const config = resolveConfig({ database: "my-reactions" });
     expect(config.comments).toBe(false);
     expect(config.maxComments).toBe(20);
+    expect(config.maxPageComments).toBe(200);
     expect(config.maxCommentLength).toBe(2000);
   });
 

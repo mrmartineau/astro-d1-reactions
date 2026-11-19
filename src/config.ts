@@ -54,6 +54,11 @@ export type D1ReactionsOptions = {
   comments?: boolean | string[];
   /** Comments one reader can post on one page. Default: 20. */
   maxComments?: number;
+  /**
+   * Comments one page can hold, from every reader together. A full page takes no
+   * more, so the list a page loads has a ceiling. Default: 200.
+   */
+  maxPageComments?: number;
   /** Longest comment, in characters. Default: 2000. */
   maxCommentLength?: number;
   /** Hearts one reader can give one page. Default: 10. */
@@ -109,6 +114,7 @@ export function resolveConfig(options: D1ReactionsOptions): ResolvedD1ReactionsC
     highlights: options.highlights ?? true,
     comments: options.comments ?? false,
     maxComments: options.maxComments ?? 20,
+    maxPageComments: options.maxPageComments ?? 200,
     maxCommentLength: options.maxCommentLength ?? 2000,
     maxHearts,
     maxHighlights: options.maxHighlights ?? 50,

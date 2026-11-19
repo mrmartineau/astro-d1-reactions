@@ -81,7 +81,8 @@ export const POST: APIRoute = async ({ request }) => {
         .prepare(
           `INSERT INTO comments (slug, visitor, name, body, quote, start, city, country)
            SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8
-           WHERE (SELECT COUNT(*) FROM comments WHERE slug = ?1 AND visitor = ?2) < ${Number(config.maxComments)}`,
+           WHERE (SELECT COUNT(*) FROM comments WHERE slug = ?1 AND visitor = ?2) < ${Number(config.maxComments)}
+             AND (SELECT COUNT(*) FROM comments WHERE slug = ?1) < ${Number(config.maxPageComments)}`,
         )
         .bind(
           slug,
@@ -94,10 +95,18 @@ export const POST: APIRoute = async ({ request }) => {
           country,
         )
         .run()) as { meta: { changes: number } };
-      // Nothing was inserted: this reader is at the limit. Say so, so the
-      // form keeps what they typed.
+      // Nothing was inserted: this reader is at their limit, or the page is
+      // full. Say so, so the form keeps what they typed. The page total is what
+      // bounds the list that every page view loads, since a reader can make up
+      // new ids to get round their own limit.
       if (!saved.meta.changes) {
-        return json({ error: "You have posted all the comments this page allows." }, 429);
+        return json(
+          {
+            error:
+              "No more comments can be added here: you are at your limit, or the page is full.",
+          },
+          429,
+        );
       }
     } else if (action === "delete-comment") {
       // Readers can delete their own comments, the admin anyone's.
