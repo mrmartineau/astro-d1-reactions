@@ -1,0 +1,298 @@
+---
+// The comment section for the bottom of a page: every comment, and a form to
+// add one. The injected API route keeps them in D1.
+//
+// Readers can also comment on one passage. When <Reactions> is on the page, the
+// tooltip above selected text has a Comment button. It sends the selection here
+// (the "reactions:comment" event) and the form then quotes it. The passage is
+// shown with the comment; it is not marked in the page text.
+//
+// Comments are drawn with textContent, so a reader cannot add HTML.
+//
+// It starts `hidden`; the script unhides it.
+import config from 'virtual:astro-d1-reactions/config';
+import { canComment, MAX_NAME } from '../core';
+import './comments.css';
+
+interface Props {
+  /**
+   * The page's path, e.g. /blog/my-post: the key its comments are kept under.
+   * Default: the current path. false: no comments.
+   */
+  slug?: string | false;
+  /**
+   * The page's frontmatter (or a content entry's `data`). `comments: false` in
+   * it hides the comments.
+   */
+  frontmatter?: { comments?: boolean } | Record<string, unknown>;
+}
+
+const { frontmatter = {} } = Astro.props;
+const path = Astro.url.pathname.replace(/(.)\/$/, '$1');
+const slug =
+  frontmatter.comments === false || Astro.props.slug === false
+    ? undefined
+    : (Astro.props.slug ?? path);
+const show = Boolean(slug) && canComment(config.comments, slug!);
+---
+
+{
+  show && (
+    <section class="comments" data-comments data-slug={slug} aria-labelledby="comments-title" hidden>
+      <h2 class="comments-title" id="comments-title">
+        Comments <span class="comments-count" data-count>0</span>
+      </h2>
+
+      <ol class="comments-list" />
+      <p class="comments-empty" hidden>
+        No comments yet. Be the first.
+      </p>
+
+      <form class="comments-form">
+        <blockquote class="comments-quote" hidden>
+          <p class="comments-quote-text" data-quote />
+          <button type="button" class="comments-quote-clear" data-clear>
+            Comment on the whole page instead
+          </button>
+        </blockquote>
+
+        <label class="comments-field">
+          <span>Name (optional)</span>
+          <input class="comments-input" name="name" maxlength={MAX_NAME} autocomplete="nickname" />
+        </label>
+        <label class="comments-field">
+          <span>Comment</span>
+          <textarea
+            class="comments-input"
+            name="text"
+            rows="4"
+            maxlength={config.maxCommentLength}
+            required
+          />
+        </label>
+        <button type="submit" class="comments-submit">
+          Post comment
+        </button>
+        <p class="comments-error" role="alert" hidden />
+        <p class="comments-status" role="status" />
+      </form>
+    </section>
+  )
+}
+
+<script>
+  import { apiRoute, icons } from 'virtual:astro-d1-reactions/config';
+  import { ago, type CommentsState, flag, type PageComment, place } from '../core';
+
+  // The same set-up as <Reactions>: with the Astro ClientRouter this module runs
+  // once, but every page brings a new section. So set it up now, and again after
+  // each navigation. `started` stops one section being set up twice, and `stop`
+  // drops the listeners of the page we left.
+  const started = new WeakSet<HTMLElement>();
+  let stop: AbortController | undefined;
+
+  function init() {
+    const box = document.querySelector<HTMLElement>('[data-comments]');
+    if (box && started.has(box)) return;
+    stop?.abort();
+    stop = undefined;
+    if (!box) return;
+    started.add(box);
+    stop = new AbortController();
+    comments(box, box.dataset.slug!, stop.signal);
+    box.hidden = false;
+  }
+
+  init();
+  // Fires after every ClientRouter navigation. Sites without the router never see it.
+  document.addEventListener('astro:page-load', init);
+
+  function comments(box: HTMLElement, slug: string, signal: AbortSignal) {
+    const list = box.querySelector<HTMLElement>('.comments-list')!;
+    const empty = box.querySelector<HTMLElement>('.comments-empty')!;
+    const count = box.querySelector<HTMLElement>('[data-count]')!;
+    const form = box.querySelector<HTMLFormElement>('.comments-form')!;
+    const quoteBox = form.querySelector<HTMLElement>('.comments-quote')!;
+    const quoteText = form.querySelector<HTMLElement>('[data-quote]')!;
+    const clear = form.querySelector<HTMLButtonElement>('[data-clear]')!;
+    const nameField = form.elements.namedItem('name') as HTMLInputElement;
+    const textField = form.elements.namedItem('text') as HTMLTextAreaElement;
+    const submit = form.querySelector<HTMLButtonElement>('.comments-submit')!;
+    const error = form.querySelector<HTMLElement>('.comments-error')!;
+    const status = form.querySelector<HTMLElement>('.comments-status')!;
+    const when = new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+
+    // The same reader id and admin token <Reactions> keeps, under the same
+    // keys: readers already have them, and changing them resets every count.
+    // Without storage the id lasts for this page load.
+    let visitor: string = crypto.randomUUID();
+    try {
+      const saved = localStorage.getItem('reactions-visitor');
+      if (saved) visitor = saved;
+      else localStorage.setItem('reactions-visitor', visitor);
+    } catch {
+      // Storage can be blocked: the reader still comments, as a new reader.
+    }
+
+    // Open any page with #admin=<token> to delete anyone's comments from then
+    // on; #admin= forgets it. <Reactions> does this too: whichever runs first
+    // takes the fragment, and the other reads storage.
+    let token = '';
+    try {
+      const fromHash = location.hash.match(/^#admin=(.*)$/);
+      if (fromHash) {
+        localStorage.setItem('reactions-admin', fromHash[1]!);
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+      token = localStorage.getItem('reactions-admin') ?? '';
+    } catch {
+      // Storage can be blocked: no admin powers, which is safe.
+    }
+
+    // The name a reader typed last time.
+    try {
+      nameField.value = localStorage.getItem('comments-name') ?? '';
+    } catch {
+      // Storage can be blocked: the field starts empty.
+    }
+
+    let data: CommentsState = { comments: [], admin: false };
+    let quote: { text: string; start: number } | undefined;
+
+    const showError = (problem: unknown) => {
+      error.textContent =
+        problem instanceof Error ? problem.message : 'Something went wrong. Try again.';
+      error.hidden = false;
+    };
+
+    // Throws with a message a reader can act on if the request fails.
+    const send = async (body: Record<string, unknown>) => {
+      const res = await fetch(apiRoute, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, visitor, token, ...body }),
+      }).catch(() => {
+        throw new Error('Could not reach the server. Try again.');
+      });
+      const reply = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(reply?.error ?? 'Something went wrong. Try again.');
+      // Do not draw it for a page we have left.
+      if (!signal.aborted) render(reply);
+    };
+
+    const setQuote = (next?: { text: string; start: number }) => {
+      quote = next;
+      quoteBox.hidden = !next;
+      quoteText.textContent = next ? next.text.replace(/\s+/g, ' ') : '';
+    };
+
+    const item = (c: PageComment) => {
+      const li = document.createElement('li');
+      li.className = 'comments-item';
+      if (c.mine) li.dataset.mine = '';
+
+      if (c.quote) {
+        const passage = document.createElement('blockquote');
+        passage.className = 'comments-passage';
+        passage.textContent = c.quote.replace(/\s+/g, ' ');
+        li.append(passage);
+      }
+
+      const body = document.createElement('p');
+      body.className = 'comments-body';
+      body.textContent = c.body;
+
+      const from = place(c.city, c.country);
+      const who = document.createElement('span');
+      who.textContent =
+        [flag(c.country), c.name || (from ? `someone from ${from}` : 'someone')]
+          .filter(Boolean)
+          .join(' ') + (c.mine ? ' (you)' : '');
+      const time = document.createElement('time');
+      time.dateTime = new Date(c.createdAt * 1000).toISOString();
+      time.title = when.format(c.createdAt * 1000);
+      time.textContent = ago(c.createdAt);
+
+      const meta = document.createElement('div');
+      meta.className = 'comments-meta';
+      meta.append(who, time);
+
+      if (c.mine || data.admin) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'comments-delete';
+        remove.innerHTML = icons.trash.replace('<svg', '<svg aria-hidden="true"');
+        remove.setAttribute('aria-label', 'Delete this comment');
+        remove.title = 'Delete';
+        remove.addEventListener('click', () => {
+          error.hidden = true;
+          send({ action: 'delete-comment', id: c.id }).catch(showError);
+        });
+        meta.append(remove);
+      }
+
+      li.append(body, meta);
+      return li;
+    };
+
+    function render(next: CommentsState) {
+      data = next;
+      count.textContent = String(data.comments.length);
+      empty.hidden = data.comments.length > 0;
+      list.replaceChildren(...data.comments.map(item));
+    }
+
+    form.addEventListener(
+      'submit',
+      async (event) => {
+        event.preventDefault();
+        error.hidden = true;
+        status.textContent = '';
+        submit.disabled = true;
+        try {
+          await send({
+            action: 'comment',
+            text: textField.value,
+            name: nameField.value,
+            quote: quote?.text,
+            start: quote?.start,
+          });
+          // Only now, so a failed post keeps what the reader typed.
+          textField.value = '';
+          setQuote(undefined);
+          status.textContent = 'Comment posted.';
+          try {
+            localStorage.setItem('comments-name', nameField.value.trim());
+          } catch {
+            // Storage can be blocked: they type the name again next time.
+          }
+        } catch (problem) {
+          showError(problem);
+        } finally {
+          submit.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    clear.addEventListener('click', () => setQuote(undefined), { signal });
+
+    // The Comment button above selected text (in <Reactions>) lands here.
+    document.addEventListener(
+      'reactions:comment',
+      (event) => {
+        const { quote: text, start } = (event as CustomEvent<{ quote: string; start: number }>)
+          .detail;
+        setQuote({ text, start });
+        form.scrollIntoView({ block: 'center' });
+        textField.focus({ preventScroll: true });
+      },
+      { signal },
+    );
+
+    send({ action: 'comments' }).catch(showError);
+  }
+</script>

@@ -21,6 +21,30 @@ export type ReactionsState = {
   admin: boolean;
 };
 
+/** A comment, on a page or on one passage of it. */
+export type PageComment = {
+  id: number;
+  /** What the reader typed. null: show "someone from …". */
+  name: string | null;
+  body: string;
+  /** The passage the comment is about. null: the whole page. */
+  quote: string | null;
+  /** Character offset of `quote` in the article. null when `quote` is. */
+  start: number | null;
+  city: string | null;
+  country: string | null;
+  createdAt: number;
+  mine: boolean;
+};
+
+/** What the API sends back for the comment actions. */
+export type CommentsState = {
+  /** Oldest first. */
+  comments: PageComment[];
+  /** The request carried the right admin token: every comment can be deleted. */
+  admin: boolean;
+};
+
 export type StatsRow = { slug: string; views: number; hearts: number; highlights: number };
 
 export type StatsActivity = {
@@ -53,6 +77,76 @@ export type D1Like = {
 /** Can readers highlight text on this path? See the `highlights` option. */
 export const canHighlight = (highlights: boolean | string[], slug: string) =>
   Array.isArray(highlights) ? highlights.some((prefix) => slug.startsWith(prefix)) : highlights;
+
+/** Can readers comment on this path? The same rule as highlights: see the `comments` option. */
+export const canComment = canHighlight;
+
+/** Longest name on a comment, in characters. */
+export const MAX_NAME = 60;
+
+/** A comment that passed `parseComment`. */
+export type NewComment = Pick<PageComment, "name" | "body" | "quote" | "start">;
+
+/**
+ * Checks what a reader posted: `text` (the comment), an optional `name`, and
+ * optionally the `quote` it is about with that quote's `start`. null: not a
+ * valid comment. The route checks again that comments are allowed on the page.
+ */
+export function parseComment(
+  input: { text?: unknown; name?: unknown; quote?: unknown; start?: unknown },
+  { maxLength, maxQuote }: { maxLength: number; maxQuote: number },
+): NewComment | null {
+  const body = typeof input.text === "string" ? input.text.trim() : "";
+  if (!body || body.length > maxLength) return null;
+  const name =
+    typeof input.name === "string"
+      ? input.name.replace(/\s+/g, " ").trim().slice(0, MAX_NAME) || null
+      : null;
+
+  // A passage needs both its text and where it starts, or neither.
+  const hasQuote = input.quote != null;
+  if (hasQuote !== (input.start != null)) return null;
+  if (!hasQuote) return { name, body, quote: null, start: null };
+
+  const rawQuote = typeof input.quote === "string" ? input.quote : "";
+  const quote = rawQuote.trim();
+  const { start } = input;
+  if (
+    !quote ||
+    quote.length > maxQuote ||
+    typeof start !== "number" ||
+    !Number.isInteger(start) ||
+    start < 0
+  ) {
+    return null;
+  }
+  // `start` is where the untrimmed quote begins. The stored quote is trimmed,
+  // so move `start` past the leading whitespace to keep them in step.
+  return { name, body, quote, start: start + (rawQuote.length - rawQuote.trimStart().length) };
+}
+
+/** Every comment on one page, oldest first, as one reader sees them. */
+export async function getComments(
+  db: D1Like,
+  slug: string,
+  visitor: string,
+  admin: boolean,
+): Promise<CommentsState> {
+  const [rows] = await db.batch([
+    db
+      .prepare(
+        "SELECT id, name, body, quote, start, city, country, created_at AS createdAt, visitor = ?2 AS mine FROM comments WHERE slug = ?1 ORDER BY created_at, id",
+      )
+      .bind(slug, visitor),
+  ]);
+  return {
+    admin,
+    comments: (rows!.results as (Omit<PageComment, "mine"> & { mine: number })[]).map((c) => ({
+      ...c,
+      mine: Boolean(c.mine),
+    })),
+  };
+}
 
 /** Views, hearts and highlights for one page, as one reader sees them. */
 export async function getState(

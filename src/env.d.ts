@@ -10,6 +10,7 @@ declare module "virtual:astro-d1-reactions/config" {
   export default config;
   export const apiRoute: Config["apiRoute"];
   export const maxHearts: Config["maxHearts"];
+  export const maxCommentLength: Config["maxCommentLength"];
   export const maxText: Config["maxText"];
   export const thanks: Config["thanks"];
   export const icons: import("./config").ReactionsIcons;

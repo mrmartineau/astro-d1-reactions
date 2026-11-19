@@ -6,11 +6,12 @@ One integration gives you:
 
 - **A pill fixed to the bottom of the page** with hearts, unique reads and reader highlights
 - **Highlights** drawn with the CSS Custom Highlight API, so your page's DOM is never changed
+- **Comments**, on a page or on a passage the reader selects (optional)
 - **An injected API endpoint** (`POST /api/reactions`)
 - **Stats components** for a public dashboard: totals, every page, recent activity
-- **Frontmatter switches**: `reactions: false` or `highlights: false` on any page
+- **Frontmatter switches**: `reactions: false`, `highlights: false` or `comments: false` on any page
 
-No cookies and no names. A reader is a random id kept in their browser, so each person counts once per page. Each heart and highlight stores the reader's city and country from Cloudflare.
+No cookies and no sign-in. A reader is a random id kept in their browser, so each person counts once per page. Each heart, highlight and comment stores the reader's city and country from Cloudflare. A comment can also carry a name, if the reader types one.
 
 Needs the [`@astrojs/cloudflare`](https://docs.astro.build/en/guides/integrations-guide/cloudflare/) adapter. The rest of your site can stay static. Only the endpoint and the stats page run on the server.
 
@@ -104,7 +105,7 @@ That's it. Open a page, give it a heart, select a sentence.
 <Reactions
   slug="/blog/my-post"            // the key reactions are kept under. Default: the current path
   highlights={false}              // hearts and reads only
-  frontmatter={entry.data}        // reads `reactions` and `highlights` from it
+  frontmatter={entry.data}        // reads `reactions`, `highlights` and `comments` from it
   when="html.classic"             // only show when <html> matches this selector
 />
 ```
@@ -134,7 +135,49 @@ Set a secret (`REACTIONS_ADMIN_TOKEN` by default):
 wrangler pages secret put REACTIONS_ADMIN_TOKEN   # .dev.vars locally
 ```
 
-Open any page with `#admin=<token>` once. From then on, that browser can delete anyone's highlights and its own reads don't count. `#admin=` forgets it. A fragment never reaches the server logs.
+Open any page with `#admin=<token>` once. From then on, that browser can delete anyone's highlights and comments, and its own reads don't count. `#admin=` forgets it. A fragment never reaches the server logs.
+
+## Comments
+
+Readers can comment on a page, or on one passage of it. Comments are off until you turn them on, with `true` or a list of path prefixes:
+
+```js
+reactions({
+  database: "my-site-reactions",
+  comments: ["/blog/"],
+});
+```
+
+Apply the new migration (see [Upgrading](#upgrading)), then put `<Comments>` under the article:
+
+```sh
+wrangler d1 migrations apply my-site-reactions --local
+wrangler d1 migrations apply my-site-reactions --remote
+```
+
+```astro
+---
+import { Comments, Reactions } from 'astro-d1-reactions/components';
+const { entry } = Astro.props;
+---
+
+<article data-highlightable><slot /></article>
+<Comments frontmatter={entry.data} />
+<Reactions frontmatter={entry.data} />
+```
+
+| Prop          | Default      | Description                                          |
+| ------------- | ------------ | ---------------------------------------------------- |
+| `slug`        | current path | The key comments are kept under. `false`: no section |
+| `frontmatter` |              | `comments: false` in it hides the section            |
+
+**On a passage.** With `<Reactions>` on the page too, text selected inside `[data-highlightable]` gets a **Comment** button next to **Highlight**. It jumps to the comment form, which quotes the passage. The comment then shows the quote. The passage is not marked in the page text. Comment also shows where `highlights` is off, with no Highlight button beside it.
+
+A comment is plain text and an optional name. The browser remembers the name. With no name, it reads "someone from London". Comments show at once. Readers delete their own, and the admin deletes any. Nothing is HTML, so a comment cannot add markup or links.
+
+`comments: false` in frontmatter hides the section and the Comment button. It does not close the API: the route only knows the `comments` option. To keep a path closed, leave it out of that option. `reactions: false` also removes the Comment button, because the pill carries it. The section stays.
+
+Anyone can make up reader ids, so on a public site add a Cloudflare rate limiting rule on the route. Each reader is also held to `maxComments` per page. A page holds at most `maxPageComments` in all, so the list it loads has a ceiling, even when someone makes up reader ids.
 
 ## Frontmatter
 
@@ -167,7 +210,14 @@ highlights: false # hearts and reads, no highlights
 ---
 ```
 
-Add the two keys to your collection schema:
+```md
+---
+title: A closed topic
+comments: false # no comments, and no Comment button on selected text
+---
+```
+
+Add the keys to your collection schema:
 
 ```ts
 // src/content.config.ts
@@ -357,21 +407,27 @@ Set any of these on `:root`. The package's defaults have zero specificity, so yo
 }
 ```
 
+The comment section is part of your page, so it takes the page's text colour and font. It uses `--rx-accent`, `--rx-heart` and `--rx-radius` if they are set. Or write rules for the `.comments-*` classes.
+
 ## Options
 
-| Option          | Default                   | Description                                                                      |
-| --------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| `database`      | required                  | D1 database name                                                                 |
-| `binding`       | `'REACTIONS_DB'`          | D1 binding name in wrangler config                                               |
-| `adminTokenEnv` | `'REACTIONS_ADMIN_TOKEN'` | Name of the admin token secret                                                   |
-| `apiRoute`      | `'/api/reactions'`        | Injected endpoint                                                                |
-| `highlights`    | `true`                    | Where readers may highlight: `true`, `false` or path prefixes, e.g. `['/blog/']` |
-| `maxHearts`     | `10`                      | Hearts one reader can give one page                                              |
-| `maxHighlights` | `50`                      | Highlights one reader can make on one page                                       |
-| `maxText`       | `1000`                    | Longest highlight, in characters                                                 |
-| `thanks`        | ten lines                 | The line shown for each heart given, in order                                    |
-| `icons`         | Phosphor icons            | See [Icons](#icons)                                                              |
-| `pages`         | every path                | What the stats page lists. See [The stats page](#the-stats-page)                 |
+| Option             | Default                   | Description                                                                            |
+| ------------------ | ------------------------- | -------------------------------------------------------------------------------------- |
+| `database`         | required                  | D1 database name                                                                       |
+| `binding`          | `'REACTIONS_DB'`          | D1 binding name in wrangler config                                                     |
+| `adminTokenEnv`    | `'REACTIONS_ADMIN_TOKEN'` | Name of the admin token secret                                                         |
+| `apiRoute`         | `'/api/reactions'`        | Injected endpoint                                                                      |
+| `highlights`       | `true`                    | Where readers may highlight: `true`, `false` or path prefixes, e.g. `['/blog/']`       |
+| `comments`         | `false`                   | Where readers may comment: `true`, `false` or path prefixes. See [Comments](#comments) |
+| `maxComments`      | `20`                      | Comments one reader can post on one page                                               |
+| `maxPageComments`  | `200`                     | Comments one page can hold, from every reader. A full page takes no more               |
+| `maxCommentLength` | `2000`                    | Longest comment, in characters                                                         |
+| `maxHearts`        | `10`                      | Hearts one reader can give one page                                                    |
+| `maxHighlights`    | `50`                      | Highlights one reader can make on one page                                             |
+| `maxText`          | `1000`                    | Longest highlight, or quoted passage, in characters                                    |
+| `thanks`           | ten lines                 | The line shown for each heart given, in order                                          |
+| `icons`            | Phosphor icons            | See [Icons](#icons)                                                                    |
+| `pages`            | every path                | What the stats page lists. See [The stats page](#the-stats-page)                       |
 
 ## The API
 
@@ -389,6 +445,18 @@ Set any of these on `:root`. The package's defaults have zero specificity, so yo
 | `highlight` | `text`, `start` | Saves a highlight (`start`: character offset) |
 | `delete`    | `id`            | Deletes your highlight, or anyone's as admin  |
 
+The comment actions return the page's comments instead of its state:
+
+```json
+{ "admin": false, "comments": [{ "id": 1, "name": null, "body": "…", "quote": null, "start": null, "mine": true, … }] }
+```
+
+| `action`         | Extra fields                        | Does                                                                                                                                                                          |
+| ---------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `comments`       |                                     | Nothing. Just the comments, oldest first                                                                                                                                      |
+| `comment`        | `text`, `name?`, `quote?`, `start?` | Saves a comment. `quote` and `start` go together. `400` if comments are off here or the text is not valid. `429` over `maxComments`, or when the page holds `maxPageComments` |
+| `delete-comment` | `id`                                | Deletes your comment, or anyone's as admin                                                                                                                                    |
+
 `slug` must match `/^\/[\w/-]{0,200}$/`. `visitor` is a UUID.
 
 Anyone can make up reader ids. If that becomes a problem, add a Cloudflare rate limiting rule on the route.
@@ -402,6 +470,44 @@ import { getState, getStats, place, flag, ago } from "astro-d1-reactions/core";
 
 const stats = await getStats(env.REACTIONS_DB);
 ```
+
+## Upgrading
+
+Update the package, then apply any new migrations. Migrations only add, so your readers' hearts, reads and highlights are never touched.
+
+```sh
+pnpm update astro-d1-reactions
+wrangler d1 migrations apply my-site-reactions --local    # for astro dev
+wrangler d1 migrations apply my-site-reactions --remote   # for production
+```
+
+Use your own database name. `migrations_dir` in your wrangler config points into `node_modules/astro-d1-reactions`, so new migration files arrive with the package. If you copied the migrations into your own folder instead, copy the new ones too.
+
+| Migration                 | Adds                                                 | Needed for                 |
+| ------------------------- | ---------------------------------------------------- | -------------------------- |
+| `0001_init.sql`           | `views`, `hearts`, `highlights`                      | everything                 |
+| `0002_heart_activity.sql` | when and where a heart was given, for the stats feed | hearts, and the stats page |
+| `0003_comments.sql`       | the `comments` table                                 | [Comments](#comments)      |
+
+### Adding comments to a site that already runs it
+
+Nothing changes until you turn comments on. They are off by default, and no existing page changes.
+
+1. Apply `0003_comments.sql`, as above. The `--remote` run changes your live database. If another site shares that database, that is fine: the migration only adds a table.
+2. Set the `comments` option. See [Comments](#comments).
+3. Put `<Comments />` on the pages.
+
+Turn comments on before you apply the migration and the comments API answers `500` (`no such table: comments` in your logs), so the form shows "Something went wrong". The rest of the page, hearts and highlights keep working. Apply the migration and it works at once. Nothing needs a rebuild.
+
+You can skip `0003` if you never want comments. Nothing reads the table until you turn them on.
+
+### One markup change
+
+The button above selected text used to be a `<button class="reactions-add">`. It is now a `<div class="reactions-add">` that holds the **Highlight** and **Comment** buttons. The class is not part of the documented theme. If your own CSS styles it as a button, point those rules at `.reactions-add button`.
+
+### Going back
+
+Wrangler has no down migrations. If you install an older version, leave the `comments` table in place. The older version never reads it.
 
 ## More Astro packages
 

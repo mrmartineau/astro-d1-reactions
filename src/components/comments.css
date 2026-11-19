@@ -1,0 +1,185 @@
+/* The comment section. Comments.astro imports this file itself.
+
+   It takes the page's text colour and font, so it suits a light or a dark
+   theme. Theme it with the pill's own --rx-accent, --rx-heart and --rx-radius
+   (the fallbacks below apply when the pill's CSS is not on the page), or write
+   rules for the .comments-* classes. */
+
+.comments {
+  --comments-line: color-mix(in oklch, currentColor 20%, transparent);
+  margin-block: 3rem;
+}
+
+.comments *,
+.comments *::before,
+.comments *::after {
+  box-sizing: border-box;
+}
+
+.comments [hidden] {
+  display: none;
+}
+
+.comments-title {
+  margin: 0 0 1rem;
+}
+
+.comments-count {
+  opacity: 0.6;
+}
+
+.comments-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.comments-empty {
+  margin: 0 0 2rem;
+  opacity: 0.7;
+}
+
+.comments-item {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--comments-line);
+  border-radius: var(--rx-radius, 0.625rem);
+}
+
+.comments-item[data-mine] {
+  border-color: color-mix(in oklch, var(--rx-accent, #f5d04c) 70%, transparent);
+}
+
+/* The passage a comment is about: the quote, cut to three lines. */
+.comments-passage,
+.comments-quote-text {
+  margin: 0;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 2px solid color-mix(in oklch, currentColor 35%, transparent);
+  opacity: 0.8;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.comments-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comments-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875em;
+  opacity: 0.7;
+}
+
+.comments-delete {
+  display: grid;
+  margin: 0 0 0 auto;
+  padding: 0.25rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+
+  svg {
+    width: 1.1em;
+    height: 1.1em;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--rx-heart, #d81b60);
+  }
+}
+
+.comments-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.comments-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.comments-input {
+  inline-size: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--comments-line);
+  border-radius: var(--rx-radius, 0.625rem);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--rx-accent, #f5d04c);
+    outline-offset: 2px;
+  }
+
+  &:user-invalid {
+    border-color: var(--rx-heart, #d81b60);
+  }
+}
+
+/* Shown when the form is about a passage: the quote, and a way to drop it. */
+.comments-quote {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.comments-quote-clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875em;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: 0.7;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+  }
+}
+
+.comments-submit {
+  justify-self: start;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rx-accent, #f5d04c);
+  color: var(--rx-bg, #1b1f24);
+  font: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.comments-error {
+  margin: 0;
+  color: var(--rx-heart, #d81b60);
+}
+
+.comments-status {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

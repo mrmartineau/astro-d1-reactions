@@ -45,6 +45,22 @@ export type D1ReactionsOptions = {
    * or a list of path prefixes such as `['/blog/', '/notes/']`. Default: true.
    */
   highlights?: boolean | string[];
+  /**
+   * Where readers may comment: `true` for every page, `false` for none, or a
+   * list of path prefixes such as `['/blog/']`. Put `<Comments>` on a page to
+   * show them. With `<Reactions>` on the page too, selected text gets a Comment
+   * button next to Highlight. Default: false.
+   */
+  comments?: boolean | string[];
+  /** Comments one reader can post on one page. Default: 20. */
+  maxComments?: number;
+  /**
+   * Comments one page can hold, from every reader together. A full page takes no
+   * more, so the list a page loads has a ceiling. Default: 200.
+   */
+  maxPageComments?: number;
+  /** Longest comment, in characters. Default: 2000. */
+  maxCommentLength?: number;
   /** Hearts one reader can give one page. Default: 10. */
   maxHearts?: number;
   /** Highlights one reader can make on one page. Default: 50. */
@@ -96,6 +112,10 @@ export function resolveConfig(options: D1ReactionsOptions): ResolvedD1ReactionsC
     adminTokenEnv: options.adminTokenEnv ?? "REACTIONS_ADMIN_TOKEN",
     apiRoute: options.apiRoute ?? "/api/reactions",
     highlights: options.highlights ?? true,
+    comments: options.comments ?? false,
+    maxComments: options.maxComments ?? 20,
+    maxPageComments: options.maxPageComments ?? 200,
+    maxCommentLength: options.maxCommentLength ?? 2000,
     maxHearts,
     maxHighlights: options.maxHighlights ?? 50,
     maxText: options.maxText ?? 1000,
